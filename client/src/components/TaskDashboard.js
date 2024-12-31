@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import settingImage from './settingimage.jpg';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import axios from 'axios';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -18,38 +19,38 @@ const TaskDashboard = () => {
     console.log("Search term:", searchTerm);
   };
 
-  const tasks = [
-    {
-      startTime: '09:10:51',
-      endTime: '04:57:12',
-      items: [
-        'Create the chat application',
-        'Create the login and signup screen',
-        'Create the database and user’s login in the database and successfully login',
-      ],
-      references: ['Chat application Refer', 'Chat application Privacy refer'],
-    },
-    {
-      startTime: '09:10:51',
-      endTime: '04:57:12',
-      items: [
-        'Create the chat application',
-        'Create the login and signup screen',
-        'Create the database and user’s login in the database and successfully login',
-      ],
-      references: ['Chat application Refer', 'Chat application Privacy refer'],
-    },
-    {
-      startTime: '10:00:00',
-      endTime: '05:00:00',
-      items: [
-        'Implement real-time messaging',
-        'Set up user authentication',
-        'Design the user interface',
-      ],
-      references: ['UI Design Guidelines', 'Authentication API Docs'],
-    },
-  ];
+  // const tasks = [
+  //   {
+  //     startTime: '09:10:51',
+  //     endTime: '04:57:12',
+  //     items: [
+  //       'Create the chat application',
+  //       'Create the login and signup screen',
+  //       'Create the database and user’s login in the database and successfully login',
+  //     ],
+  //     references: ['Chat application Refer', 'Chat application Privacy refer'],
+  //   },
+  //   {
+  //     startTime: '09:10:51',
+  //     endTime: '04:57:12',
+  //     items: [
+  //       'Create the chat application',
+  //       'Create the login and signup screen',
+  //       'Create the database and user’s login in the database and successfully login',
+  //     ],
+  //     references: ['Chat application Refer', 'Chat application Privacy refer'],
+  //   },
+  //   {
+  //     startTime: '10:00:00',
+  //     endTime: '05:00:00',
+  //     items: [
+  //       'Implement real-time messaging',
+  //       'Set up user authentication',
+  //       'Design the user interface',
+  //     ],
+  //     references: ['UI Design Guidelines', 'Authentication API Docs'],
+  //   },
+  // ];
 
   const attendanceData = [
     { date: '25-12-2024', inTime: 'Christmas', outTime: 'Christmas' },
@@ -83,6 +84,13 @@ const TaskDashboard = () => {
     }
   };
 
+  const[task, settasks] = useState([]);
+  useEffect( () => {
+    axios.get("http://localhost:8000/api/tasks")
+    .then(task => settasks(task.data))
+    .catch(err => console.log(err));
+  }, [])
+
   return (
     <div style={styles.container}>
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -101,7 +109,7 @@ const TaskDashboard = () => {
     </form>
 
       <div style={{ display: 'flex', gap: '20px' }}>
-        <div style={{ flex: 2 }}>
+        {/* <div style={{ flex: 2 }}>
           {tasks.map((task, index) => (
             <div
               key={index}
@@ -136,7 +144,33 @@ const TaskDashboard = () => {
               </div>
             </div>
           ))}
+        </div> */}
+
+        <div style={{border: '1px solid #ccc', borderRadius: '5px', flex: 1,backgroundColor: 'white' }}>
+          {/* <h2 className="card-title">Work Records</h2> */}
+          <div className="card-container">
+            {task.map((task, index) => (
+              <div className="card" key={index}>
+                <h3>{task.name}</h3>
+                <p><strong>Learning:</strong> {task.learning}</p>
+                <p><strong>Start Time:</strong> {task.startTime}</p>
+                <p><strong>End Time:</strong> {task.endTime}</p>
+                <div>
+                  <strong>Time Slots:</strong>
+                  <ul>
+                    {task.timeSlots.map((slot, idx) => (
+                      <li key={idx}>
+                        {slot.startTime} - {slot.endTime} ({slot.notes})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
+
 
         <div style={{ flex: 1 }}>
           <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', backgroundColor: 'white' }}>
@@ -191,6 +225,31 @@ const TaskDashboard = () => {
               </tbody>
             </table>
           </div>
+
+          <div className="attendance-report-container">
+      <h2>Attendance Report</h2>
+        <table className="attendance-report-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              
+            </tr>
+          </thead>
+          <tbody>
+            {task.map((task, index) => (
+              <tr key={index}>
+                <td>{task.timestamp?.createdAt ? new Date(task.timestamp.createdAt).toLocaleDateString() : 'N/A'}</td>
+                <td>{task.startTime}</td>
+                <td>{task.endTime}</td>
+                
+              </tr>
+            ))}
+          </tbody>
+        </table>
+          </div>
+
         </div>
       </div>
     </div>
