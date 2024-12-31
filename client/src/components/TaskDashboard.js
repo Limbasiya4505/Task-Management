@@ -3,6 +3,7 @@ import { Pie } from 'react-chartjs-2';
 import settingImage from './settingimage.jpg';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import axios from 'axios';
+import { format } from 'date-fns';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -151,6 +152,9 @@ const TaskDashboard = () => {
           <div className="card-container">
             {task.map((task, index) => (
               <div className="card" key={index}>
+                <h4 style={{fontSize: '20px'}}>{format(new Date(task.createdAt).toLocaleDateString(), 'dd-MM-yyyy')}</h4>
+                <h4>{new Date(task.createdAt).toLocaleTimeString()}</h4>
+                <hr></hr>
                 <h3>{task.name}</h3>
                 <p><strong>Learning:</strong> {task.learning}</p>
                 <p><strong>Start Time:</strong> {task.startTime}</p>
@@ -240,7 +244,7 @@ const TaskDashboard = () => {
           <tbody>
             {task.map((task, index) => (
               <tr key={index}>
-                <td>{task.timestamp?.createdAt ? new Date(task.timestamp.createdAt).toLocaleDateString() : 'N/A'}</td>
+                <td>{format(new Date(task.createdAt).toLocaleDateString(), 'dd-MM-yyyy')}</td>
                 <td>{task.startTime}</td>
                 <td>{task.endTime}</td>
                 
