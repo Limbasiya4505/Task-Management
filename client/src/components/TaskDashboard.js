@@ -9,7 +9,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TaskDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-
+  
   const handleInputChange = (event) => {
     setSearchTerm(event.target.value);
   };
@@ -19,39 +19,6 @@ const TaskDashboard = () => {
     // Perform search action with searchTerm
     console.log("Search term:", searchTerm);
   };
-
-  // const tasks = [
-  //   {
-  //     startTime: '09:10:51',
-  //     endTime: '04:57:12',
-  //     items: [
-  //       'Create the chat application',
-  //       'Create the login and signup screen',
-  //       'Create the database and user’s login in the database and successfully login',
-  //     ],
-  //     references: ['Chat application Refer', 'Chat application Privacy refer'],
-  //   },
-  //   {
-  //     startTime: '09:10:51',
-  //     endTime: '04:57:12',
-  //     items: [
-  //       'Create the chat application',
-  //       'Create the login and signup screen',
-  //       'Create the database and user’s login in the database and successfully login',
-  //     ],
-  //     references: ['Chat application Refer', 'Chat application Privacy refer'],
-  //   },
-  //   {
-  //     startTime: '10:00:00',
-  //     endTime: '05:00:00',
-  //     items: [
-  //       'Implement real-time messaging',
-  //       'Set up user authentication',
-  //       'Design the user interface',
-  //     ],
-  //     references: ['UI Design Guidelines', 'Authentication API Docs'],
-  //   },
-  // ];
 
   const attendanceData = [
     { date: '25-12-2024', inTime: 'Christmas', outTime: 'Christmas' },
@@ -67,7 +34,7 @@ const TaskDashboard = () => {
     labels: ['Present', 'Absent'],
     datasets: [
       {
-        data: [75, 25],
+        data: [80, 20],
         backgroundColor: [
           '#2E7D32',
           '#98FB98'
@@ -92,9 +59,29 @@ const TaskDashboard = () => {
     .catch(err => console.log(err));
   }, [])
 
-  return (
+  return (   
+
     <div style={styles.container}>
+      <nav style={styles.nav}>
+        <div style={styles.logo}>i</div>
+        <div style={styles.navLinks}>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <div
+              style={{ ...styles.activeLink, cursor: "pointer" }}
+              onClick={() => console.log("Navigate to HOME")}>HOME</div>
+            <div
+              style={{ ...styles.link, cursor: "pointer" }}
+              onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
+            <div
+              style={{ ...styles.link, cursor: "pointer" }}
+              onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
+          </div>
+        </div>
+      </nav>
+      
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    
+
       <form onSubmit={handleSubmit}>
         <div className="search-bar">
           <input
@@ -122,8 +109,8 @@ const TaskDashboard = () => {
                 <hr></hr>
                 <h3>{task.name}</h3>
                 <p><strong>Learning:</strong> {task.learning}</p>
-                <p><strong>Start Time:</strong> {new Date(task.startTime).toISOString()}</p>
-                <p><strong>End Time:</strong> {task.endTime}</p>
+                <p><strong>Start Time:</strong> {format(new Date(task.startTime).getTime(), 'HH:MM:SS')}</p>
+                <p><strong>End Time:</strong> {format(new Date(task.endTime).getTime(), 'HH:MM:SS')}</p>
                 <div>
                   <strong>Time Slots:</strong>
                   <ul>
@@ -175,7 +162,7 @@ const TaskDashboard = () => {
                         backgroundColor: record.inTime === 'Christmas' ? '#40C4FF' : '#2E7D32',
                         color: 'white',
                         padding: '3px 8px',
-                        borderRadius: '3px'
+                        borderRadius: '3px'                       
                       }}>
                         {record.inTime}
                       </span>
@@ -185,11 +172,12 @@ const TaskDashboard = () => {
                         backgroundColor: record.outTime === 'Christmas' ? '#40C4FF' : '#2E7D32',
                         color: 'white',
                         padding: '3px 8px',
-                        borderRadius: '3px'
+                        borderRadius: '3px'                
                       }}>
                         {record.outTime}
                       </span>
                     </td>
+                    
                   </tr>
                 ))}
               </tbody>
@@ -224,6 +212,7 @@ const TaskDashboard = () => {
       </div>
     </div>
     </div>
+
   );
 };
 
@@ -235,6 +224,39 @@ const styles = {
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'cover',
     fontFamily: 'Arial, sans-serif'
+  },
+  nav: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '1rem 2rem',
+    backgroundColor: 'white',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  },
+  logo: {
+    width: '36px',
+    height: '36px',
+    backgroundColor: '#007bff',
+    borderRadius: '50%',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 'bold'
+  },
+  navLinks: {
+    display: 'flex',
+    gap: '2rem',
+    margin: '0 auto'
+  },
+  link: {
+    textDecoration: 'none',
+    color: '#666',
+    fontSize: '14px'
+  },
+  activeLink: {
+    textDecoration: 'none',
+    color: '#007bff',
+    fontSize: '14px'
   }
 }
 export default TaskDashboard;
