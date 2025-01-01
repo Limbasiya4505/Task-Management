@@ -96,58 +96,23 @@ const TaskDashboard = () => {
     <div style={styles.container}>
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <form onSubmit={handleSubmit}>
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchTerm}
-          onChange={handleInputChange}
-        />
-        <button type="submit" className="submit-button">
-          SUBMIT
-        </button>
-      </div>
-    </form>
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={handleInputChange}
+          />
+          <button type="submit" className="submit-button">
+            SUBMIT
+          </button>
+        </div>
+      </form>
 
       <div style={{ display: 'flex', gap: '20px' }}>
-        {/* <div style={{ flex: 2 }}>
-          {tasks.map((task, index) => (
-            <div
-              key={index}
-              style={{
-                backgroundColor: 'white',
-                border: '1px solid #ccc',
-                borderRadius: '5px',
-                marginBottom: '20px',
-                padding: '15px'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <span>{task.startTime}</span>
-                <span>Task Name</span>
-                <span>{task.endTime}</span>
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                {task.items.map((item, i) => (
-                  <li key={i} style={{ marginBottom: '10px' }}>
-                    <span style={{ marginRight: '10px' }}>•</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <div style={{ display: 'flex', gap: '20px', marginTop: '15px' }}>
-                {task.references.map((ref, i) => (
-                  <div key={i}>
-                    <span style={{ marginRight: '10px' }}>•</span>
-                    {ref}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div> */}
-
-        <div style={{border: '1px solid #ccc', borderRadius: '5px', flex: 1,backgroundColor: 'white' }}>
+        <div style={{flex: 1}}>
+      
+        <div style={{border: '1px solid #ccc', borderRadius: '5px', backgroundColor: 'white' }}>
           {/* <h2 className="card-title">Work Records</h2> */}
           <div className="card-container">
             {task.map((task, index) => (
@@ -157,14 +122,15 @@ const TaskDashboard = () => {
                 <hr></hr>
                 <h3>{task.name}</h3>
                 <p><strong>Learning:</strong> {task.learning}</p>
-                <p><strong>Start Time:</strong> {task.startTime}</p>
+                <p><strong>Start Time:</strong> {new Date(task.startTime).toISOString()}</p>
                 <p><strong>End Time:</strong> {task.endTime}</p>
                 <div>
                   <strong>Time Slots:</strong>
                   <ul>
-                    {task.timeSlots.map((slot, idx) => (
-                      <li key={idx}>
-                        {slot.startTime} - {slot.endTime} ({slot.notes})
+                    {task.timeSlots.map((slot, index) => (
+                      <li key={index}>
+                        {slot.startTime} - {slot.endTime} <br></br>
+                          <t><b>Work:</b></t> {slot.notes}
                       </li>
                     ))}
                   </ul>
@@ -173,13 +139,13 @@ const TaskDashboard = () => {
             ))}
           </div>
         </div>
+        </div>
 
 
-
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 0.5 }}>
           <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', backgroundColor: 'white' }}>
             <div style={{ marginBottom: '20px', maxWidth: '400px' }}>
-              <Pie data={pieChartData} options={pieChartOptions} />
+              <center><Pie data={pieChartData} options={pieChartOptions} /></center>
             </div>
           </div>
 
@@ -231,27 +197,27 @@ const TaskDashboard = () => {
           </div>
 
           <div className="attendance-report-container">
-      <h2>Attendance Report</h2>
-        <table className="attendance-report-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              
-            </tr>
-          </thead>
-          <tbody>
-            {task.map((task, index) => (
-              <tr key={index}>
-                <td>{format(new Date(task.createdAt).toLocaleDateString(), 'dd-MM-yyyy')}</td>
-                <td>{task.startTime}</td>
-                <td>{task.endTime}</td>
-                
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <h2><center>Attendance Report</center></h2>
+            <table className="attendance-report-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  
+                </tr>
+              </thead>
+              <tbody>
+                {task.map((task, index) => (
+                  <tr key={index}>
+                    <td>{format(new Date(task.createdAt).toLocaleDateString(), 'dd-MM-yyyy')}</td>
+                    <td>{task.startTime}</td>
+                    <td>{task.endTime}</td>
+                    
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
         </div>
