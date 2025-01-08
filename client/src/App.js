@@ -14,8 +14,8 @@ function App() {
       <div className="App">
         <Routes>
           
-          <Route path="/" element={<SignUpForm />} />
-          <Route path="/Login" element={<Login />} />
+          <Route path="/register" element={<SignUpForm />} />
+          <Route path="/" element={<Login />} />
           <Route path="/ForgotPassword" element={<ForgotPassword />} />
           <Route path="/OTPVerification" element={<OTPVerification />} />
           <Route path="/CreatePassword" element={<CreatePassword />} />

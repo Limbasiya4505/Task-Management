@@ -49,6 +49,10 @@ function Login() {
         navigate('/ForgotPassword');
     };
 
+    const signup = () => {
+        navigate('/register');
+    };
+
     return (
         <div className="window-container">
             <div className="split-layout">
@@ -88,6 +92,9 @@ function Login() {
                                 Log In
                                 <span className="arrow">→</span>
                             </button>
+                            <div className="auth-link" style={{marginTop: '10px' }}>
+                                Create an new account? <a href="/register" onClick={signup}>SIGN UP</a>
+                            </div>
                         </form>
 
                         

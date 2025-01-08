@@ -57,7 +57,7 @@ const SignUpForm = () => {
           if (response.ok) {
             const data = await response.json();
             alert(data.message || 'Registration successful!');
-            navigate('/Login'); // Redirect to login page
+            navigate('/'); // Redirect to register page
           } else {
             const errorData = await response.json();
             console.error('Signup failed:', errorData);
@@ -168,7 +168,7 @@ const SignUpForm = () => {
               </form>
   
               <p className="auth-link">
-                Already have an account? <a href="/login">Sign In</a>
+                Already have an account? <a href="/">Sign In</a>
               </p>
             </div>
           </div>
