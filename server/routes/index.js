@@ -7,7 +7,6 @@ const updateUserDetails = require('../controller/updateUserDetails');
 const ForgotPassword = require('../controller/forgot-password');
 const taskController = require('../controller/TaskController')
 const searchUser = require('../controller/searchUser');
-
 const router = express.Router();
 
 router.post('/register', registerUser);

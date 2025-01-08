@@ -3,42 +3,87 @@ import { Pie } from 'react-chartjs-2';
 import settingImage from './settingimage.jpg';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import axios from 'axios';
-import { format } from 'date-fns';
+import { format, isSunday, eachWeekOfInterval } from 'date-fns';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TaskDashboard = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  const handleInputChange = (event) => {
-    setSearchTerm(event.target.value);
+  const [selectedUser , setSelectedUser ] = useState("");
+  const [task, setTasks] = useState([]);
+  const [filteredTasks, setFilteredTasks] = useState([]);
+  const [attendanceStats, setAttendanceStates] = useState({ present: 0, absent: 0 });
+  const [users, setUsers] = useState([]);
+  const [token] = useState(localStorage.getItem('token'));
+
+  const holidays = [
+    '2025-01-01', // New Year's Day
+    '2025-01-26', // Republic Day
+    '2025-03-17', // Holi
+    '2025-04-14', // Dr. Ambedkar Jayanti
+    '2025-05-01', // Labour Day
+    '2025-08-15', // Independence Day
+    '2025-10-02', // Gandhi Jayanti
+    '2025-11-01', // Diwali
+    '2025-12-25'  // Christmas
+  ];
+
+  const sundays = eachWeekOfInterval({
+    start: new Date(2025, 0, 1),
+    end: new Date(2025, 11, 31)
+  }).map(date => format(date, 'yyyy-MM-dd'));
+
+  const allHolidaysAndSundays = [...holidays, ...sundays];
+
+  const handleUserChange = (event) => {
+    setSelectedUser (event.target.value);
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    // Perform search action with searchTerm
-    console.log("Search term:", searchTerm);
+    const filtered = task.filter(task =>
+      task.name.toLowerCase().includes(selectedUser.toLowerCase())
+    );
+    setFilteredTasks(filtered);
   };
 
-  const attendanceData = [
-    { date: '25-12-2024', inTime: 'Christmas', outTime: 'Christmas' },
-    { date: '24-12-2024', inTime: '7:45', outTime: '15:20' },
-    { date: '23-12-2024', inTime: '8:00', outTime: '14:14' },
-    { date: '22-12-2024', inTime: '7:35', outTime: '12:30' },
-    { date: '21-12-2024', inTime: '8:20', outTime: '15:55' },
-    { date: '20-12-2024', inTime: '7:55', outTime: '15:20' },
-    { date: '19-12-2024', inTime: '8:30', outTime: '15:20' }
-  ];
+  useEffect(() => {
+    // Fetch tasks and users
+    axios.get("http://localhost:8000/api/tasks", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(response => {
+        setTasks(response.data);
+        setFilteredTasks(response.data);
+      })
+      .catch(err => console.log(err));
+
+    axios.get("http://localhost:8000/api/user-details", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(response => {
+        setUsers(response.data);
+      })
+      .catch(err => console.log(err));
+  }, [token]);
+
+  useEffect(() => {
+    const present = task.filter(task => task.startTime && task.endTime).length;
+    const absent = task.length - present;
+    setAttendanceStates({ present, absent });
+  }, [task]);
 
   const pieChartData = {
     labels: ['Present', 'Absent'],
     datasets: [
       {
-        data: [80, 20],
-        backgroundColor: [
-          '#2E7D32',
-          '#98FB98'
-        ],
+        data: [attendanceStats.present, attendanceStats.absent],
+        backgroundColor: ['#2E7D32', '#98FB98'],
         borderWidth: 0
       }
     ]
@@ -52,15 +97,36 @@ const TaskDashboard = () => {
     }
   };
 
-  const[task, settasks] = useState([]);
-  useEffect( () => {
-    axios.get("http://localhost:8000/api/tasks")
-    .then(task => settasks(task.data))
-    .catch(err => console.log(err));
-  }, [])
+  const isHoliday = (date) => {
+    return allHolidaysAndSundays.includes(format(date, 'yyyy-MM-dd'));
+  };
 
-  return (   
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.text('My Attendance Report', 14, 10);
+    doc.autoTable({
+      head: [['Date', 'In Time', 'Out Time']],
+      body: task.map(record => {
+        const recordDate = format(new Date(record.createdAt), 'dd-MM-yyyy');
+        const holiday = isHoliday(new Date(record.createdAt));
+        const sunday = isSunday(new Date(record.createdAt));
+        if (holiday) {
+          return [recordDate, 'Holiday', 'Holiday'];
+        } else if (sunday) {
+ return [recordDate, 'Sunday', 'Sunday'];
+        } else {
+          return [
+            recordDate,
+            format(new Date(record.startTime), 'HH:mm'),
+            format(new Date(record.endTime), 'HH:mm')
+          ];
+        }
+      })
+    });
+    doc.save('Attendance_Report_2025.pdf');
+  };
 
+  return (
     <div style={styles.container}>
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
@@ -78,141 +144,118 @@ const TaskDashboard = () => {
           </div>
         </div>
       </nav>
-      
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-    
 
-      <form onSubmit={handleSubmit}>
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={handleInputChange}
-          />
-          <button type="submit" className="submit-button">
-            SUBMIT
-          </button>
-        </div>
-      </form>
+      <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <form onSubmit={handleSubmit}>
+          <div className="search-bar">
+            <select value={selectedUser } onChange={handleUserChange}>
+              <option value="">Select a user...</option>
+              {users.map(user => (
+                <option key={user.id} value={user.name}>{user.name}</option>
+              ))}
+            </select>
+            <button type="submit" className="submit-button">
+              SUBMIT
+            </button>
+          </div>
+        </form>
 
-      <div style={{ display: 'flex', gap: '20px' }}>
-        <div style={{flex: 1}}>
-      
-        <div style={{border: '1px solid #ccc', borderRadius: '5px', backgroundColor: 'white' }}>
-          {/* <h2 className="card-title">Work Records</h2> */}
-          <div className="card-container">
-            {task.map((task, index) => (
-              <div className="card" key={index}>
-                <h4 style={{fontSize: '20px'}}>{format(new Date(task.createdAt).toLocaleDateString(), 'dd-MM-yyyy')}</h4>
-                <h4>{new Date(task.createdAt).toLocaleTimeString()}</h4>
-                <hr></hr>
-                <h3>{task.name}</h3>
-                <p><strong>Learning:</strong> {task.learning}</p>
-                <p><strong>Start Time:</strong> {format(new Date(task.startTime).getTime(), 'HH:MM:SS')}</p>
-                <p><strong>End Time:</strong> {format(new Date(task.endTime).getTime(), 'HH:MM:SS')}</p>
-                <div>
-                  <strong>Time Slots:</strong>
-                  <ul>
-                    {task.timeSlots.map((slot, index) => (
-                      <li key={index}>
-                        {slot.startTime} - {slot.endTime} <br></br>
-                          <t><b>Work:</b></t> {slot.notes}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+        {users.map((user) => (
+          <h4 key={user.id}>{user.name}</h4>
+        ))}
+
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ border: '1px solid #ccc', borderRadius: '5px', backgroundColor: 'white' }}>
+              <div className="card-container">
+                {filteredTasks.length > 0 ? (
+                  filteredTasks.map((task, index) => (
+                    <div className="card" key={index}>
+                      <h4 style={{ fontSize: '20px' }}>{format(new Date(task.createdAt), 'dd-MM-yyyy')}</h4>
+                      <h4>{new Date(task.createdAt).toLocaleTimeString()}</h4>
+                      <hr />
+                      <h3>{task.name}</h3>
+                      <p><strong>Learning:</strong> {task.learning}</p>
+                      <p><strong>Start Time:</strong> {format(new Date(task.startTime), 'HH:mm:ss')}</p>
+                      <p><strong>End Time:</strong> {format(new Date(task.endTime), 'HH:mm:ss')}</p>
+                      <div>
+                        <strong>Time Slots:</strong>
+                        <ul>
+                          {task.timeSlots.map((slot, index) => (
+                            <li key={index}>
+                              {slot.startTime} - {slot.endTime} <br />
+                              <strong>Work:</strong> {slot.notes}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p>No tasks found matching your search.</p>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-        </div>
-
-
-        <div style={{ flex: 0.5 }}>
-          <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', backgroundColor: 'white' }}>
-            <div style={{ marginBottom: '20px', maxWidth: '400px' }}>
-              <center><Pie data={pieChartData} options={pieChartOptions} /></center>
             </div>
           </div>
 
-          <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', marginTop: '10px', backgroundColor: 'white' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-              <span style={{ marginRight: '10px' }}>↓</span>
-              <h3 style={{ margin: 0 }}>My Attendance</h3>
+          <div style={{ flex: 0.5 }}>
+            <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', backgroundColor: 'white' }}>
+              <div style={{ marginBottom: '20px', maxWidth: '400px' }}>
+                <center><Pie data={pieChartData} options={pieChartOptions} /></center>
+              </div>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                  <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
-                </tr>
-                <tr>
-                  <th></th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>In Time</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Out Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceData.map((record, index) => (
-                  <tr key={index}>
-                    <td style={{ padding: '10px' }}>{record.date}</td>
-                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <span style={{
-                        backgroundColor: record.inTime === 'Christmas' ? '#40C4FF' : '#2E7D32',
-                        color: 'white',
-                        padding: '3px 8px',
-                        borderRadius: '3px'                       
-                      }}>
-                        {record.inTime}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <span style={{
-                        backgroundColor: record.outTime === 'Christmas' ? '#40C4FF' : '#2E7D32',
-                        color: 'white',
-                        padding: '3px 8px',
-                        borderRadius: '3px'                
-                      }}>
-                        {record.outTime}
-                      </span>
-                    </td>
-                    
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
-          <div className="attendance-report-container">
-            <h2><center>Attendance Report</center></h2>
-            <table className="attendance-report-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
-                  
-                </tr>
-              </thead>
-              <tbody>
-                {task.map((task, index) => (
-                  <tr key={index}>
-                    <td>{format(new Date(task.createdAt).toLocaleDateString(), 'dd-MM-yyyy')}</td>
-                    <td>{task.startTime}</td>
-                    <td>{task.endTime}</td>
-                    
+            <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', marginTop: '10px', backgroundColor: 'white' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                <h3 style={{ margin: 0 }}>My Attendance</h3>
+                <button onClick={downloadPDF} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '5px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <img style={{ width: '20px', height: '20 px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
+                  Download PDF
+                </button>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
+                    <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  <tr>
+                    <th></th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>In Time</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>Out Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {task.map((record, index) => {
+                    const recordDate = new Date(record.createdAt);
+                    const holiday = isHoliday(recordDate);
+                    const sunday = isSunday(recordDate);
+                    return (
+                      <tr key={index}>
+                        <td style={{ padding: '10px' }}>{format(recordDate, 'dd-MM-yyyy')}</td>
+                        <td style={{ padding: '10px', textAlign: 'center' }} colSpan="2">
+                          {holiday ? (
+                            <span style={{ backgroundColor: '#40C4FF', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>Holiday</span>
+                          ) : sunday ? (
+                            <span style={{ backgroundColor: '#FFB74D', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>Sunday</span>
+                          ) : (
+                            <>
+                              <span style={{ backgroundColor: '#2E7D32', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>{format(new Date(record.startTime), 'HH:mm')}</span>
+                              &nbsp; &nbsp;
+                              <span style={{ backgroundColor: '#2E7D32', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>{format(new Date(record.endTime), 'HH:mm')}</span>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-
         </div>
       </div>
     </div>
-    </div>
-
   );
 };
 
@@ -258,5 +301,6 @@ const styles = {
     color: '#007bff',
     fontSize: '14px'
   }
-}
+};
+
 export default TaskDashboard;

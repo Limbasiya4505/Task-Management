@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Trash } from 'react-feather'; // Import Trash icon for remove button
-import settingImage from './settingimage.jpg';
-import axios from 'axios'; // Import axios for making HTTP requests
-import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Trash } from 'react-feather'; // Icons for buttons
+import settingImage from './settingimage.jpg'; // Ensure this image exists in your project
+import axios from 'axios'; // For HTTP requests
+import { useNavigate } from 'react-router-dom'; // For navigation
 
 const TaskManager = () => {
   const navigate = useNavigate();
@@ -10,85 +10,100 @@ const TaskManager = () => {
   const [selectedTask, setSelectedTask] = useState('');
   const [learningNotes, setLearningNotes] = useState('');
   const [timeBlocks, setTimeBlocks] = useState([
-    {
-      id: 1,
-      time: '8:00:00 to 9:00:00',
-      description: ''
-    },
-    {
-      id: 2,
-      time: '9:00:00 to 10:00:00',
-      description: ''
-    },
-    {
-      id: 3,
-      time: '10:00:00 to 11:00:00',
-      description: ''
-    }
+    { id: 1, time: '8:00:00 to 9:00:00', description: '' },
+    { id: 2, time: '9:00:00 to 10:00:00', description: '' },
+    { id: 3, time: '10:00:00 to 11:00:00', description: '' },
   ]);
   const [timer, setTimer] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+  const [user, setUser ] = useState({ _id: null, name: '' });
 
   const tasks = [
     {
       id: 1,
       name: 'FrontEnd Developer',
       description: [
-        'Designing user interfaces: Creating and maintaining user interfaces for websites and web applications',
-        'Developing interactive technology: Creating responsive technology for dynamic web pages, such as menu buttons and online forms',
-        'Building reusable components: Creating front-end libraries and reusable components for future use',
-        'Optimizing performance: Optimizing components for maximum performance across a variety of browsers and web-capable devices',
-        'Collaborating with teams: Working with other teams to optimize website performance and ensure seamless integration with back-end systems',
-        'Writing code: Writing clean, efficient, and maintainable code',
-        'Troubleshooting: Troubleshooting and debugging issues to ensure smooth user experiences',
-        'Participating in code reviews: Participating in code reviews to maintain code quality and consistency',
-        'Staying up-to-date: Staying up-to-date with the latest industry trends and technologies',
-        'Providing documentation: Providing code documentation and other inputs to technical documents'
-      ]
+        'Designing user interfaces',
+        'Developing interactive technology',
+        'Building reusable components',
+        'Optimizing performance',
+        'Collaborating with teams',
+        'Writing clean code',
+        'Troubleshooting and debugging',
+        'Participating in code reviews',
+        'Staying up-to-date with industry trends',
+        'Providing documentation',
+      ],
     },
     { id: 2, name: 'Backend Developer', description: [] },
     { id: 3, name: 'UI & UX Designer', description: [] },
     { id: 4, name: 'Android Developer', description: [] },
-    { id: 5, name: 'Python Developer', description: [] }
+    { id: 5, name: 'Python Developer', description: [] },
   ];
+
+  const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/user-details', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUser ({ _id: response.data._id, username: response.data.name });
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    if (token) {
+      fetchUserData();
+    }
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const selectedTaskData = tasks.find(task => task.id === parseInt(selectedTask));
-    
+
     const taskData = {
       name: selectedTask ? selectedTaskData.name : '',
       learning: learningNotes,
-      startTime: timer,
-      endTime: timer + 60,
-      timeSlots: timeBlocks.map(block => ({
+      startTime: startTime,
+      endTime: endTime,
+      timeSlots: timeBlocks.map((block) => ({
         startTime: block.time.split(' to ')[0],
         endTime: block.time.split(' to ')[1],
-        notes: block.description
+        notes: block.description,
       })),
-      // status: 'Pending' // Default status
     };
 
     try {
-      const response = await axios.post('http://localhost:8000/api/tasks', taskData);
-      // console.log('Task saved:', response.data);
-      alert('Task saved successful!', response.data);
+      const response = await axios.post('http://localhost:8000/api/tasks', taskData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      alert('Task saved successfully!', response.data);
       navigate('/TaskManager');
-      // Optionally reset the form or show a success message
     } catch (error) {
       console.error('Error saving task:', error);
     }
   };
 
   const updateTimeBlock = (id, description) => {
-    setTimeBlocks(timeBlocks.map(block => 
-      block.id === id ? { ...block, description } : block
-    ));
+    setTimeBlocks(
+      timeBlocks.map((block) =>
+        block.id === id ? { ...block, description } : block
+      )
+    );
   };
 
   const removeTimeBlock = (id) => {
-    setTimeBlocks(timeBlocks.filter(block => block.id !== id));
+    setTimeBlocks(timeBlocks.filter((block) => block.id !== id));
   };
 
   useEffect(() => {
@@ -98,60 +113,61 @@ const TaskManager = () => {
         setTimer(prevTimer => prevTimer + 1);
       }, 1000);
     }
-    return () => clearInterval(interval); // Cleanup interval
+    return () => clearInterval(interval);
   }, [isRunning]);
 
   const handleStart = () => {
     setIsRunning(true);
+    setStartTime(new Date().toISOString()); // Record the start time
   };
 
   const handleStop = () => {
     setIsRunning(false);
+    setEndTime(new Date().toISOString()); // Record the end time
   };
 
   const formatTime = (time) => {
     const hours = String(Math.floor(time / 3600)).padStart(2, '0');
     const minutes = String(Math.floor((time % 3600) / 60)).padStart(2, '0');
     const seconds = String(time % 60).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`; // Fixed template literal
+    return `${hours}:${minutes}:${seconds}`;
   };
 
   const handleAddBlock = () => {
     let nextStart, nextEnd;
-  
+
     if (timeBlocks.length === 0) {
-      // If no blocks exist, start from 8:00:00 to 9:00:00 as default
       nextStart = new Date('1970-01-01T08:00:00');
       nextEnd = new Date(nextStart);
       nextEnd.setHours(nextEnd.getHours() + 1);
     } else {
-      // Calculate the next time block based on the last block
       const [, end] = timeBlocks[timeBlocks.length - 1].time.split(' to ');
       const isValidTime = (time) => {
         const timePattern = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
         return timePattern.test(time);
       };
-  
+
       if (isValidTime(end)) {
         nextStart = new Date(`1970-01-01T${end}`);
-        nextStart.setSeconds(0); // Ensure seconds are set to 0
+        nextStart.setSeconds(0);
 
         nextEnd = new Date(nextStart);
-        nextEnd.setHours(nextEnd.getHours() + 1); // Add 1 hour
+        nextEnd.setHours(nextEnd.getHours() + 1);
       } else {
-        // If the last block's end time is invalid, start from 9:00:00
         nextStart = new Date('1970-01-01T09:00:00');
         nextEnd = new Date(nextStart);
         nextEnd.setHours(nextEnd.getHours() + 1);
       }
     }
-  
+
     const newBlock = {
       id: timeBlocks.length + 1,
       time: `${nextStart.toTimeString().split(' ')[0]} to ${nextEnd.toTimeString().split(' ')[0]}`,
-      description: ''
+      description: '',
+      startTime: nextStart.toTimeString().split(' ')[0],
+      endTime: nextEnd.toTimeString().split(' ')[0]
     };
-  
+
     setTimeBlocks([...timeBlocks, newBlock]);
   };
 
@@ -160,16 +176,25 @@ const TaskManager = () => {
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <div
-              style={{ ...styles.activeLink, cursor: "pointer" }}
-              onClick={() => console.log("Navigate to HOME")}>HOME</div>
+              style={{ ...styles.activeLink, cursor: 'pointer' }}
+              onClick={() => console.log('Navigate to HOME')}
+            >
+              HOME
+            </div>
             <div
-              style={{ ...styles.link, cursor: "pointer" }}
-              onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
+              style={{ ...styles.link, cursor: 'pointer' }}
+              onClick={() => console.log('Navigate to ABOUT ME')}
+            >
+              ABOUT ME
+            </div>
             <div
-              style={{ ...styles.link, cursor: "pointer" }}
-              onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
+              style={{ ...styles.link, cursor: 'pointer' }}
+              onClick={() => console.log('Navigate to PROJECT')}
+            >
+              PROJECT
+            </div>
           </div>
         </div>
         <button style={styles.searchButton}>
@@ -179,35 +204,39 @@ const TaskManager = () => {
 
       <div style={styles.content}>
         <div style={styles.taskSection}>
-          <select 
+        <h2>Welcome {user.username}</h2>
+          <select
             value={selectedTask}
             onChange={(e) => setSelectedTask(e.target.value)}
             style={styles.select}>
             <option value="">Select Task</option>
-            {tasks.map(task => (
-              <option key={task.id} value={task.id}>{task.name}</option>
+            {tasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.name}
+              </option>
             ))}
           </select>
 
           <input 
             type="text" 
             value={selectedTask ? tasks.find((task) => task.id === parseInt(selectedTask))?.name : ""} 
-            // onChange={(e) => setSelectedTask(e.target.value)}
             style={styles.taskInput} 
             readOnly 
           />
 
           <div style={styles.descriptionSection}>
-            <h3 style={styles.sectionTitle}>Description :</h3>
+            <h3 style={styles.sectionTitle}>Description:</h3>
             <ul style={styles.descriptionList}>
               {tasks[0].description.map((item, index) => (
-                <li key={index} style={styles.descriptionItem}>{item}</li>
+                <li key={index} style={styles.descriptionItem}>
+                  {item}
+                </li>
               ))}
             </ul>
           </div>
 
           <div style={styles.descriptionSection}>
-            <h3 style={styles.sectionTitle}>Learning :</h3>
+            <h3 style={styles.sectionTitle}>Learning:</h3>
             <textarea
               placeholder="Type here...."
               value={learningNotes}
@@ -215,39 +244,32 @@ const TaskManager = () => {
               style={styles.textarea}
             />
           </div>
-
-          {/* <div style={styles.taskStatus}>
-            <div>
-              <h3 style={styles.sectionTitle}>Complete Task :</h3>
-              <div style={styles.statusItem}>
-                <span style={styles.checkmark}>✓</span> Task 1
-              </div>
-            </div>
-            <div>
-              <h3 style={styles.sectionTitle}>Pending Task :</h3>
-              <div style={styles.statusItem}>
-                <span style={styles.cross}>×</span> Task 2
-              </div>
-            </div>
-          </div> */}
         </div>
 
         <div style={styles.timeSection}>
           <div style={styles.timeControls}>
             <div style={styles.timer}>{formatTime(timer)}</div>
             <div style={styles.timeButtons}>
-              <button style={styles.timeButton} onClick={handleStart}>TIME START</button>
-              <button style={styles.timeButton} onClick={handleStop}>TIME END</button>
+              <button style={styles.timeButton} onClick={handleStart}>
+                TIME START
+              </button>
+              <button style={styles.timeButton} onClick={handleStop}>
+                TIME END
+              </button>
             </div>
           </div>
 
           <form onSubmit={handleSubmit}>
-            {timeBlocks.map(block => (
+            {timeBlocks.map((block) => (
               <div key={block.id} style={styles.timeBlock}>
                 <div style={styles.timeHeader}>
                   <span style={styles.timeIcon}>⏰</span>
                   <span style={styles.timeText}>{block.time}</span>
-                  <button type="button" onClick={() => removeTimeBlock(block.id)} style={styles.removeButton}>
+                  <button
+                    type="button"
+                    onClick={() => removeTimeBlock(block.id)}
+                    style={styles.removeButton}
+                  >
                     <Trash size={16} />
                   </button>
                 </div>
@@ -263,7 +285,11 @@ const TaskManager = () => {
             ))}
 
             <div style={styles.submitSection}>
-              <button type="button" style={styles.addButton} onClick={handleAddBlock}>
+              <button
+                type="button"
+                style={styles.addButton}
+                onClick={handleAddBlock}
+              >
                 <Plus size={24} />
               </button>
               <button type="submit" style={styles.submitButton}>
@@ -273,7 +299,6 @@ const TaskManager = () => {
           </form>
         </div>
       </div>
-      
     </div>
   );
 };
@@ -377,23 +402,6 @@ const styles = {
       content: '"•"',
       marginRight: '0.5rem'
     }
-  },
-  taskStatus: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1rem'
-  },
-  statusItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    fontSize: '14px'
-  },
-  checkmark: {
-    color: '#28a745'
-  },
-  cross: {
-    color: '#dc3545'
   },
   timeSection: {
     display: 'flex',

@@ -4,7 +4,7 @@ const UserModel = require("../models/UserModel")
 async function updateUserDetails(request, response) {
     try {
         const token = request.cookies.token || "";
-        // const user = await getUserDetailsFromToken(token);
+        const user = await getUserDetailsFromToken(token);
 
         // Log the user ID for debugging
         console.log("User ID from token:", user._id);

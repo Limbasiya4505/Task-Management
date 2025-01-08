@@ -1,30 +1,30 @@
-// const getUserDetailsFromToken = require("../helpers/getUserDetailsFromToken");
-const User = require('../models/UserModel')
+const getUserDetailsFromToken = require("../helpers/getUserDetailsFromToken");
 
 async function userDetails(req, res) {
-    try {
-        const Users = await User.find();
-        res.json(Users);
-      } catch (error) {
-        res.status(500).json({ error: error.message });
-      }
-    // try {
-    //     // Token handling removed
-    //     // const token = req.cookies.token || "";
+  try {
+    // Get the token from the request cookies or headers
+    const token = req.cookies.token || req.headers['authorization']?.split(' ')[1];
 
-    //     // Assuming user details can be fetched without token
-    //     const user = await getUserDetailsFromToken(); // Adjusted function call if needed
+    if (!token) {
+      return res.status(401).json({
+        message: 'Access denied. No token provided.',
+        error: true,
+      });
+    }
 
-    //     return res.status(200).json({
-    //         message: "user details",
-    //         data: user
-    //     });
-    // } catch (error) {
-    //     return res.status(500).json({
-    //         message: error.message || error,
-    //         error: true
-    //     });
-    // }
+    // Fetch user details using the token
+    const user = await getUserDetailsFromToken(token);
+
+    return res.status(200).json({
+      message: "User details retrieved successfully",
+      data: user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message || error,
+      error: true,
+    });
+  }
 }
 
 module.exports = userDetails;
