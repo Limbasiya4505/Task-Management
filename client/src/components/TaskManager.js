@@ -46,21 +46,32 @@ const TaskManager = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
+    // First, let's check if we have a token
+    console.log('Token:', localStorage.getItem('token'));
+  
     const fetchUserData = async () => {
       try {
+        // Check if we're making the API call
+        console.log('Starting API call');
+        
         const response = await axios.get('http://localhost:8000/api/user-details', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        setUser ({ _id: response.data._id, username: response.data.name });
+        
+        setUser({ _id: response.data._id, name: response.data.data.name });
+
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('API Error:', error.message);
+        console.error('Full error:', error);
       }
     };
-
+  
     if (token) {
       fetchUserData();
+    } else {
+      console.log('No token found!');
     }
   }, [token]);
 
@@ -204,7 +215,8 @@ const TaskManager = () => {
 
       <div style={styles.content}>
         <div style={styles.taskSection}>
-        <h2>Welcome {user.username}</h2>
+        <h2>Welcome {user.name}</h2>
+        
           <select
             value={selectedTask}
             onChange={(e) => setSelectedTask(e.target.value)}

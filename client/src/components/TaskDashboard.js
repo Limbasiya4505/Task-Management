@@ -10,12 +10,11 @@ import 'jspdf-autotable';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TaskDashboard = () => {
-  const [selectedUser , setSelectedUser ] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [task, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [attendanceStats, setAttendanceStates] = useState({ present: 0, absent: 0 });
-  const [users, setUsers] = useState([]);
-  const [token] = useState(localStorage.getItem('token'));
+  // const [users, setUsers] = useState([]);
 
   const holidays = [
     '2025-01-01', // New Year's Day
@@ -36,41 +35,33 @@ const TaskDashboard = () => {
 
   const allHolidaysAndSundays = [...holidays, ...sundays];
 
-  const handleUserChange = (event) => {
-    setSelectedUser (event.target.value);
+  const handleInputChange = (event) => {
+    setSearchTerm(event.target.value);
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
     const filtered = task.filter(task =>
-      task.name.toLowerCase().includes(selectedUser.toLowerCase())
+      task.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredTasks(filtered);
   };
 
   useEffect(() => {
     // Fetch tasks and users
-    axios.get("http://localhost:8000/api/tasks", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+    axios.get("http://localhost:8000/api/tasks")
       .then(response => {
         setTasks(response.data);
         setFilteredTasks(response.data);
       })
       .catch(err => console.log(err));
 
-    axios.get("http://localhost:8000/api/user-details", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(response => {
-        setUsers(response.data);
-      })
-      .catch(err => console.log(err));
-  }, [token]);
+    // axios.get("http://localhost:8000/api/user-details")
+    //   .then(response => {
+    //     setUsers(response.data);
+    //   })
+    //   .catch(err => console.log(err));
+  }, []);
 
   useEffect(() => {
     const present = task.filter(task => task.startTime && task.endTime).length;
@@ -113,7 +104,7 @@ const TaskDashboard = () => {
         if (holiday) {
           return [recordDate, 'Holiday', 'Holiday'];
         } else if (sunday) {
- return [recordDate, 'Sunday', 'Sunday'];
+          return [recordDate, 'Sunday', 'Sunday'];
         } else {
           return [
             recordDate,
@@ -125,6 +116,7 @@ const TaskDashboard = () => {
     });
     doc.save('Attendance_Report_2025.pdf');
   };
+
 
   return (
     <div style={styles.container}>
@@ -148,23 +140,23 @@ const TaskDashboard = () => {
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
         <form onSubmit={handleSubmit}>
           <div className="search-bar">
-            <select value={selectedUser } onChange={handleUserChange}>
-              <option value="">Select a user...</option>
-              {users.map(user => (
-                <option key={user.id} value={user.name}>{user.name}</option>
-              ))}
-            </select>
+            <input
+              type="text"
+              placeholder="Search by user name..."
+              value={searchTerm}
+              onChange={handleInputChange}
+            />
             <button type="submit" className="submit-button">
               SUBMIT
             </button>
           </div>
-        </form>
+        </form>            
 
-        {users.map((user) => (
-          <h4 key={user.id}>{user.name}</h4>
-        ))}
-
-        <div style={{ display: 'flex', gap: '20px' }}>
+                      {/* {users.map((user) => (
+                        <h4>{user.name}</h4>
+                      ))} */}
+                      
+        <div style={{ display: 'flex', gap: '20px'}}>
           <div style={{ flex: 1 }}>
             <div style={{ border: '1px solid #ccc', borderRadius: '5px', backgroundColor: 'white' }}>
               <div className="card-container">
@@ -174,6 +166,7 @@ const TaskDashboard = () => {
                       <h4 style={{ fontSize: '20px' }}>{format(new Date(task.createdAt), 'dd-MM-yyyy')}</h4>
                       <h4>{new Date(task.createdAt).toLocaleTimeString()}</h4>
                       <hr />
+                      
                       <h3>{task.name}</h3>
                       <p><strong>Learning:</strong> {task.learning}</p>
                       <p><strong>Start Time:</strong> {format(new Date(task.startTime), 'HH:mm:ss')}</p>
@@ -209,7 +202,7 @@ const TaskDashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
                 <h3 style={{ margin: 0 }}>My Attendance</h3>
                 <button onClick={downloadPDF} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '5px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <img style={{ width: '20px', height: '20 px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
+                  <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
                   Download PDF
                 </button>
               </div>
