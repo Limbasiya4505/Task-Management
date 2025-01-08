@@ -60,8 +60,8 @@ const TaskManager = () => {
           },
         });
         
-        setUser({ _id: response.data._id, name: response.data.data.name });
-
+        setUser({ _id: response.data.data._id, name: response.data.data.name });
+        console.log(response.data.data._id)
       } catch (error) {
         console.error('API Error:', error.message);
         console.error('Full error:', error);
@@ -85,6 +85,7 @@ const TaskManager = () => {
       learning: learningNotes,
       startTime: startTime,
       endTime: endTime,
+      user: user._id,
       timeSlots: timeBlocks.map((block) => ({
         startTime: block.time.split(' to ')[0],
         endTime: block.time.split(' to ')[1],
@@ -215,7 +216,7 @@ const TaskManager = () => {
 
       <div style={styles.content}>
         <div style={styles.taskSection}>
-        <h2>Welcome {user.name}</h2>
+        <h2>Welcome, {user.name}</h2>
         
           <select
             value={selectedTask}

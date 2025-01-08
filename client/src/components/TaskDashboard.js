@@ -14,7 +14,8 @@ const TaskDashboard = () => {
   const [task, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [attendanceStats, setAttendanceStates] = useState({ present: 0, absent: 0 });
-  // const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedUser , setSelectedUser ] = useState('');
 
   const holidays = [
     '2025-01-01', // New Year's Day
@@ -56,11 +57,11 @@ const TaskDashboard = () => {
       })
       .catch(err => console.log(err));
 
-    // axios.get("http://localhost:8000/api/user-details")
-    //   .then(response => {
-    //     setUsers(response.data);
-    //   })
-    //   .catch(err => console.log(err));
+    axios.get("http://localhost:8000/api/user-details")
+      .then(response => {
+        setUsers(response.data);
+      })
+      .catch(err => console.log(err));
   }, []);
 
   useEffect(() => {
@@ -117,13 +118,18 @@ const TaskDashboard = () => {
     doc.save('Attendance_Report_2025.pdf');
   };
 
+  const handleUserChange = (event) => {
+    setSelectedUser (event.target.value);
+    const filteredTasks = task.filter(task => task.name === event.target.value);
+    setFilteredTasks(filteredTasks);
+  };
 
   return (
     <div style={styles.container}>
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex ", gap: "10px" }}>
             <div
               style={{ ...styles.activeLink, cursor: "pointer" }}
               onClick={() => console.log("Navigate to HOME")}>HOME</div>
@@ -150,13 +156,19 @@ const TaskDashboard = () => {
               SUBMIT
             </button>
           </div>
-        </form>            
+        </form>
 
-                      {/* {users.map((user) => (
-                        <h4>{user.name}</h4>
-                      ))} */}
-                      
-        <div style={{ display: 'flex', gap: '20px'}}>
+        <div>
+          <label htmlFor="user-select">Select User:</label>
+          <select id="user-select" value={selectedUser } onChange={handleUserChange}>
+            <option value="">--Select a User--</option>
+            {users.map(user => (
+              <option key={user._id} value={user.name}>{user.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', gap: '20px' }}>
           <div style={{ flex: 1 }}>
             <div style={{ border: '1px solid #ccc', borderRadius: '5px', backgroundColor: 'white' }}>
               <div className="card-container">
@@ -166,7 +178,6 @@ const TaskDashboard = () => {
                       <h4 style={{ fontSize: '20px' }}>{format(new Date(task.createdAt), 'dd-MM-yyyy')}</h4>
                       <h4>{new Date(task.createdAt).toLocaleTimeString()}</h4>
                       <hr />
-                      
                       <h3>{task.name}</h3>
                       <p><strong>Learning:</strong> {task.learning}</p>
                       <p><strong>Start Time:</strong> {format(new Date(task.startTime), 'HH:mm:ss')}</p>
@@ -210,7 +221,7 @@ const TaskDashboard = () => {
                 <thead>
                   <tr>
                     <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                    <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
+ <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
                   </tr>
                   <tr>
                     <th></th>
