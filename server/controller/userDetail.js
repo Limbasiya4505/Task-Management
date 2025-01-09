@@ -1,4 +1,5 @@
 const getUserDetailsFromToken = require("../helpers/getUserDetailsFromToken");
+const User = require('../models/UserModel');
 
 async function userDetails(req, res) {
   try {
@@ -27,4 +28,20 @@ async function userDetails(req, res) {
   }
 }
 
-module.exports = userDetails;
+// Function to fetch all registered users
+async function getAllUsers(req, res) {
+  try {
+    const users = await User.find({}, { password: 0 }); // Exclude passwords
+    return res.status(200).json({
+      message: "All users retrieved successfully",
+      data: users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message || error,
+      error: true,
+    });
+  }
+}
+
+module.exports = { userDetails, getAllUsers };

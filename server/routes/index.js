@@ -11,7 +11,8 @@ const router = express.Router();
 
 router.post('/register', registerUser);
 router.post('/login', login);
-router.get('/user-details', userDetails);
+router.get('/getAllUsers', userDetails.getAllUsers);
+router.get('/user-details', userDetails.userDetails);
 router.get('/logout', logout);
 
 router.post('/send_otp_email', ForgotPassword.send_otp);

@@ -10,10 +10,10 @@ import 'jspdf-autotable';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TaskDashboard = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [task, setTasks] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
-  const [attendanceStats, setAttendanceStates] = useState({ present: 0, absent: 0 });
+  const [attendanceStats, setAttendanceStats] = useState({ present: 0, absent: 0 });
   const [users, setUsers] = useState([]);
   const [selectedUser , setSelectedUser ] = useState('');
 
@@ -26,13 +26,13 @@ const TaskDashboard = () => {
     '2025-08-15', // Independence Day
     '2025-10-02', // Gandhi Jayanti
     '2025-11-01', // Diwali
-    '2025-12-25'  // Christmas
+    '2025-12-25', // Christmas
   ];
 
   const sundays = eachWeekOfInterval({
     start: new Date(2025, 0, 1),
-    end: new Date(2025, 11, 31)
-  }).map(date => format(date, 'yyyy-MM-dd'));
+    end: new Date(2025, 11, 31),
+  }).map((date) => format(date, 'yyyy-MM-dd'));
 
   const allHolidaysAndSundays = [...holidays, ...sundays];
 
@@ -42,33 +42,36 @@ const TaskDashboard = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const filtered = task.filter(task =>
+    const filtered = tasks.filter((task) =>
       task.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredTasks(filtered);
   };
 
   useEffect(() => {
-    // Fetch tasks and users
-    axios.get("http://localhost:8000/api/tasks")
-      .then(response => {
+    // Fetch tasks
+    axios
+      .get('http://localhost:8000/api/tasks')
+      .then((response) => {
         setTasks(response.data);
         setFilteredTasks(response.data);
       })
-      .catch(err => console.log(err));
+      .catch((err) => console.log(err));
 
-    axios.get("http://localhost:8000/api/user-details")
-      .then(response => {
-        setUsers(response.data);
+    // Fetch all registered users
+    axios
+      .get('http://localhost:8000/api/getAllUsers')
+      .then((response) => {
+        setUsers(response.data.data);
       })
-      .catch(err => console.log(err));
+      .catch((err) => console.log(err));
   }, []);
 
   useEffect(() => {
-    const present = task.filter(task => task.startTime && task.endTime).length;
-    const absent = task.length - present;
-    setAttendanceStates({ present, absent });
-  }, [task]);
+    const present = tasks.filter((task) => task.startTime && task.endTime).length;
+    const absent = tasks.length - present;
+    setAttendanceStats({ present, absent });
+  }, [tasks]);
 
   const pieChartData = {
     labels: ['Present', 'Absent'],
@@ -76,17 +79,17 @@ const TaskDashboard = () => {
       {
         data: [attendanceStats.present, attendanceStats.absent],
         backgroundColor: ['#2E7D32', '#98FB98'],
-        borderWidth: 0
-      }
-    ]
+        borderWidth: 0,
+      },
+    ],
   };
 
   const pieChartOptions = {
     plugins: {
       legend: {
-        position: 'bottom'
-      }
-    }
+        position: 'bottom',
+      },
+    },
   };
 
   const isHoliday = (date) => {
@@ -98,7 +101,7 @@ const TaskDashboard = () => {
     doc.text('My Attendance Report', 14, 10);
     doc.autoTable({
       head: [['Date', 'In Time', 'Out Time']],
-      body: task.map(record => {
+      body: tasks.map((record) => {
         const recordDate = format(new Date(record.createdAt), 'dd-MM-yyyy');
         const holiday = isHoliday(new Date(record.createdAt));
         const sunday = isSunday(new Date(record.createdAt));
@@ -110,17 +113,17 @@ const TaskDashboard = () => {
           return [
             recordDate,
             format(new Date(record.startTime), 'HH:mm'),
-            format(new Date(record.endTime), 'HH:mm')
+            format(new Date(record.endTime), 'HH:mm'),
           ];
         }
-      })
+      }),
     });
-    doc.save('Attendance_Report_2025.pdf');
+    doc.save('Attendance_Report_2025 .pdf');
   };
 
   const handleUserChange = (event) => {
     setSelectedUser (event.target.value);
-    const filteredTasks = task.filter(task => task.name === event.target.value);
+    const filteredTasks = tasks.filter(task => task.name === event.target.value);
     setFilteredTasks(filteredTasks);
   };
 
@@ -129,7 +132,7 @@ const TaskDashboard = () => {
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
-          <div style={{ display: "flex ", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
             <div
               style={{ ...styles.activeLink, cursor: "pointer" }}
               onClick={() => console.log("Navigate to HOME")}>HOME</div>
@@ -210,10 +213,10 @@ const TaskDashboard = () => {
             </div>
 
             <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', marginTop: '10px', backgroundColor: 'white' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px'}}>
                 <h3 style={{ margin: 0 }}>My Attendance</h3>
                 <button onClick={downloadPDF} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '5px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
+ <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
                   Download PDF
                 </button>
               </div>
@@ -221,7 +224,7 @@ const TaskDashboard = () => {
                 <thead>
                   <tr>
                     <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
- <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
+                    <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
                   </tr>
                   <tr>
                     <th></th>
@@ -230,7 +233,7 @@ const TaskDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {task.map((record, index) => {
+                  {tasks.map((record, index) => {
                     const recordDate = new Date(record.createdAt);
                     const holiday = isHoliday(recordDate);
                     const sunday = isSunday(recordDate);
