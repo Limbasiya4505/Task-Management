@@ -17,18 +17,7 @@ const TaskDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser , setSelectedUser ] = useState('');
 
-  const holidays = [
-    '2025-01-01', // New Year's Day
-    '2025-01-26', // Republic Day
-    '2025-03-17', // Holi
-    '2025-04-14', // Dr. Ambedkar Jayanti
-    '2025-05-01', // Labour Day
-    '2025-08-15', // Independence Day
-    '2025-10-02', // Gandhi Jayanti
-    '2025-11-01', // Diwali
-    '2025-12-25', // Christmas
-  ];
-
+  const holidays = [/* Array of holidays */];
   const sundays = eachWeekOfInterval({
     start: new Date(2025, 0, 1),
     end: new Date(2025, 11, 31),
@@ -49,18 +38,14 @@ const TaskDashboard = () => {
   };
 
   useEffect(() => {
-    // Fetch tasks
-    axios
-      .get('http://localhost:8000/api/tasks')
+    axios.get('http://localhost:8000/api/tasks')
       .then((response) => {
         setTasks(response.data);
         setFilteredTasks(response.data);
       })
       .catch((err) => console.log(err));
 
-    // Fetch all registered users
-    axios
-      .get('http://localhost:8000/api/getAllUsers')
+    axios.get('http://localhost:8000/api/getAllUsers')
       .then((response) => {
         setUsers(response.data.data);
       })
@@ -75,13 +60,11 @@ const TaskDashboard = () => {
 
   const pieChartData = {
     labels: ['Present', 'Absent'],
-    datasets: [
-      {
-        data: [attendanceStats.present, attendanceStats.absent],
-        backgroundColor: ['#2E7D32', '#98FB98'],
-        borderWidth: 0,
-      },
-    ],
+    datasets: [{
+      data: [attendanceStats.present, attendanceStats.absent],
+      backgroundColor: ['#2E7D32', '#98FB98'],
+      borderWidth: 0,
+    }],
   };
 
   const pieChartOptions = {
@@ -92,9 +75,7 @@ const TaskDashboard = () => {
     },
   };
 
-  const isHoliday = (date) => {
-    return allHolidaysAndSundays.includes(format(date, 'yyyy-MM-dd'));
-  };
+  const isHoliday = (date) => allHolidaysAndSundays.includes(format(date, 'yyyy-MM-dd'));
 
   const downloadPDF = () => {
     const doc = new jsPDF();
@@ -118,13 +99,25 @@ const TaskDashboard = () => {
         }
       }),
     });
-    doc.save('Attendance_Report_2025 .pdf');
+    doc.save('Attendance_Report_2025.pdf');
   };
 
   const handleUserChange = (event) => {
     setSelectedUser (event.target.value);
-    const filteredTasks = tasks.filter(task => task.name === event.target.value);
+    const selectedUserId = users.find(user => user.name === event.target.value)._id;
+    const filteredTasks = tasks.filter(task => task.user === selectedUserId);
     setFilteredTasks(filteredTasks);
+  };
+
+  const getUserById = (_id) => {
+    if (!users || users.length === 0) {
+      console.log('Users not loaded yet');
+      return 'Unknown User';
+    }
+  
+    const user = users.find(user => user._id === _id);
+  
+    return user ? user.name : 'Unknown User';
   };
 
   return (
@@ -133,15 +126,9 @@ const TaskDashboard = () => {
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
           <div style={{ display: "flex", gap: "10px" }}>
-            <div
-              style={{ ...styles.activeLink, cursor: "pointer" }}
-              onClick={() => console.log("Navigate to HOME")}>HOME</div>
-            <div
-              style={{ ...styles.link, cursor: "pointer" }}
-              onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
-            <div
-              style={{ ...styles.link, cursor: "pointer" }}
-              onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
+            <div style={{ ...styles.activeLink, cursor: "pointer" }} onClick={() => console.log("Navigate to HOME")}>HOME</div>
+            <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
+            <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
           </div>
         </div>
       </nav>
@@ -149,21 +136,13 @@ const TaskDashboard = () => {
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
         <form onSubmit={handleSubmit}>
           <div className="search-bar">
-            <input
-              type="text"
-              placeholder="Search by user name..."
-              value={searchTerm}
-              onChange={handleInputChange}
-            />
-            <button type="submit" className="submit-button">
-              SUBMIT
-            </button>
+            <input type="text" placeholder="Search By Task Name..." value={searchTerm} onChange={handleInputChange} />
+            <button type="submit" className="submit-button">SUBMIT</button>
           </div>
         </form>
 
         <div>
-          <label htmlFor="user-select">Select User:</label>
-          <select id="user-select" value={selectedUser } onChange={handleUserChange}>
+          <select id="user-select" value={selectedUser } onChange={handleUserChange} style={styles.dropdown}>
             <option value="">--Select a User--</option>
             {users.map(user => (
               <option key={user._id} value={user.name}>{user.name}</option>
@@ -182,6 +161,7 @@ const TaskDashboard = () => {
                       <h4>{new Date(task.createdAt).toLocaleTimeString()}</h4>
                       <hr />
                       <h3>{task.name}</h3>
+                      <p><strong>Assigned User:</strong> {getUserById(task.user)}</p>
                       <p><strong>Learning:</strong> {task.learning}</p>
                       <p><strong>Start Time:</strong> {format(new Date(task.startTime), 'HH:mm:ss')}</p>
                       <p><strong>End Time:</strong> {format(new Date(task.endTime), 'HH:mm:ss')}</p>
@@ -216,7 +196,7 @@ const TaskDashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px'}}>
                 <h3 style={{ margin: 0 }}>My Attendance</h3>
                 <button onClick={downloadPDF} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '5px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
- <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
+                  <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
                   Download PDF
                 </button>
               </div>
@@ -307,6 +287,15 @@ const styles = {
     textDecoration: 'none',
     color: '#007bff',
     fontSize: '14px'
+  },
+  dropdown: {
+    width: '30%',
+    padding: '10px',
+    borderRadius: '5px',
+    border: '1px solid #ccc',
+    margin: '10px 0',
+    backgroundColor: 'white',
+    fontSize: '16px'
   }
 };
 
