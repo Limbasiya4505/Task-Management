@@ -15,7 +15,7 @@ const TaskDashboard = () => {
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [attendanceStats, setAttendanceStats] = useState({ present: 0, absent: 0 });
   const [users, setUsers] = useState([]);
-  const [selectedUser , setSelectedUser ] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
 
   const holidays = [/* Array of holidays */];
   const sundays = eachWeekOfInterval({
@@ -53,10 +53,20 @@ const TaskDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const present = tasks.filter((task) => task.startTime && task.endTime).length;
-    const absent = tasks.length - present;
-    setAttendanceStats({ present, absent });
-  }, [tasks]);
+    if (selectedUser) {
+      const selectedUserTasks = tasks.filter((task) => task.user === selectedUser);
+      setFilteredTasks(selectedUserTasks);
+
+      const present = selectedUserTasks.filter((task) => task.startTime && task.endTime).length;
+      const absent = selectedUserTasks.length - present;
+      setAttendanceStats({ present, absent });
+    } else {
+      setFilteredTasks(tasks);
+      const present = tasks.filter((task) => task.startTime && task.endTime).length;
+      const absent = tasks.length - present;
+      setAttendanceStats({ present, absent });
+    }
+  }, [selectedUser, tasks]);
 
   const pieChartData = {
     labels: ['Present', 'Absent'],
@@ -82,7 +92,7 @@ const TaskDashboard = () => {
     doc.text('My Attendance Report', 14, 10);
     doc.autoTable({
       head: [['Date', 'In Time', 'Out Time']],
-      body: tasks.map((record) => {
+      body: filteredTasks.map((record) => {
         const recordDate = format(new Date(record.createdAt), 'dd-MM-yyyy');
         const holiday = isHoliday(new Date(record.createdAt));
         const sunday = isSunday(new Date(record.createdAt));
@@ -103,10 +113,8 @@ const TaskDashboard = () => {
   };
 
   const handleUserChange = (event) => {
-    setSelectedUser (event.target.value);
-    const selectedUserId = users.find(user => user.name === event.target.value)._id;
-    const filteredTasks = tasks.filter(task => task.user === selectedUserId);
-    setFilteredTasks(filteredTasks);
+    const selectedUserId = event.target.value;
+    setSelectedUser(selectedUserId);
   };
 
   const getUserById = (_id) => {
@@ -114,9 +122,9 @@ const TaskDashboard = () => {
       console.log('Users not loaded yet');
       return 'Unknown User';
     }
-  
+
     const user = users.find(user => user._id === _id);
-  
+
     return user ? user.name : 'Unknown User';
   };
 
@@ -125,7 +133,7 @@ const TaskDashboard = () => {
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex ", gap: "10px" }}>
             <div style={{ ...styles.activeLink, cursor: "pointer" }} onClick={() => console.log("Navigate to HOME")}>HOME</div>
             <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
             <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
@@ -145,7 +153,7 @@ const TaskDashboard = () => {
           <select id="user-select" value={selectedUser } onChange={handleUserChange} style={styles.dropdown}>
             <option value="">--Select a User--</option>
             {users.map(user => (
-              <option key={user._id} value={user.name}>{user.name}</option>
+              <option key={user._id} value={user._id}>{user.name}</option>
             ))}
           </select>
         </div>
@@ -193,7 +201,7 @@ const TaskDashboard = () => {
             </div>
 
             <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', marginTop: '10px', backgroundColor: 'white' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px'}}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
                 <h3 style={{ margin: 0 }}>My Attendance</h3>
                 <button onClick={downloadPDF} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '5px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                   <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
@@ -213,7 +221,7 @@ const TaskDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.map((record, index) => {
+                  {filteredTasks.map((record, index) => {
                     const recordDate = new Date(record.createdAt);
                     const holiday = isHoliday(recordDate);
                     const sunday = isSunday(recordDate);
