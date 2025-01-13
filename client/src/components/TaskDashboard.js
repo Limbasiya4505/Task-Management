@@ -20,12 +20,25 @@ const TaskDashboard = () => {
   const holidays = [
     '2025-01-14', // Makar Sankranti
     '2025-01-26', // Republic Day
-    '2025-02-18', // Maha Shivaratri
-    '2025-03-22', // Holi
-    '2025-04-14', // Dr. B.R. Ambedkar Jayanti
-    '2025-05-01', // Labour Day
-    '2025-06-15', // Example Holiday for June 2025
+    '2025-02-26', // Maha Shivaratri
+    '2025-03-14', // Holi (2nd Day - Dhuleti)
+    '2025-03-31', // Ramjan-Eid (Eid-Ul-Fitra)
+    '2025-04-10', // Mahavir Janma Kalyanak
+    '2025-04-14', // Dr. B.R. Ambedkar's Birthday
+    '2025-04-18', // Good Friday
+    '2025-04-29', // Bhagvan Shree Parshuram Jayanti
+    '2025-06-07', // Eid-Ul-Adha (Bakri-Eid)
+    '2025-08-15', // Independence Day
+    '2025-08-16', // Janmashtami
+    '2025-08-27', // Ganesh Chaturthi
+    '2025-10-02', // Gandhi Jayanti
+    '2025-10-21', // Diwali
+    '2025-10-22', // Vikram Samvat New Year
+    '2025-10-23', // Bhai Dooj
+    '2025-11-19', // Guru Nanak Jayanti
+    '2025-12-25', // Christmas Day
   ];
+  
 
   const handleInputChange = (event) => {
     setSearchTerm(event.target.value);
@@ -90,8 +103,42 @@ const TaskDashboard = () => {
 
   const isHoliday = (date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    return holidays.includes(formattedDate);
+    const holiday = holidays.find(h => h === formattedDate);
+    
+    if (holiday) {
+      const holidayNames = {
+        '2025-01-14': 'Makar Sankranti',
+        '2025-01-26': 'Republic Day',
+        '2025-02-26': 'Maha Shivaratri',
+        '2025-03-14': 'Holi',
+        '2025-03-31': 'Ramjan-Eid (Eid-Ul-Fitra)',
+        '2025-04-10': 'Mahavir Janma Kalyanak',
+        '2025-04-14': 'Dr. B.R. Ambedkar Jayanti',
+        '2025-04-18': 'Good Friday',
+        '2025-04-29': 'Bhagvan Shree Parshuram Jayanti',
+        '2025-06-07': 'Eid-Ul-Adha (Bakri-Eid)',
+        '2025-07-06': 'Muharram',
+        '2025-08-09': 'Raksha Bandhan',
+        '2025-08-15': 'Independence Day',
+        '2025-08-16': 'Janmashtami',
+        '2025-08-16': 'Parsi New Year',
+        '2025-08-27': 'Ganesh Chaturthi',
+        '2025-09-05': 'Eid e Milad',
+        '2025-10-02': 'Gandhi Jayanti',
+        '2025-10-02': 'Vijaya Dashami',
+        '2025-10-21': 'Diwali',
+        '2025-10-22': 'Govardhan Puja',
+        '2025-10-27': 'Chhat Puja',
+        '2025-10-31': 'Sardar Vallabhbhai Patel Jayanti',
+        '2025-11-19': 'Guru Nanak Jayanti',
+        '2025-12-25': 'Christmas Day'
+      };
+      
+      return holidayNames[holiday];
+    }
+    return null;
   };
+  
 
   const calculateDuration = (startTime, endTime) => {
     if (!startTime || !endTime) return 'N/A';
@@ -205,21 +252,22 @@ const TaskDashboard = () => {
   const getMonthAttendance = () => {
     const firstDayOfMonth = startOfMonth(currentMonth);
     const lastDayOfMonth = endOfMonth(currentMonth);
-
+  
     const daysInMonth = eachDayOfInterval({
       start: firstDayOfMonth,
       end: lastDayOfMonth,
     });
-
+  
     return daysInMonth.map(date => {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      if (isHoliday(date)) {
-        return { date, status: 'Holiday', startTime: null, endTime: null };
+      const holidayName = isHoliday(date);
+      
+      if (holidayName) {
+        return { date, status: `${holidayName}`, startTime: null, endTime: null };
       } else if (isSunday(date)) {
         return { date, status: 'Sunday', startTime: null, endTime: null };
       } else {
         const taskForDay = tasks.find(task =>
-          format(new Date(task.createdAt), 'yyyy-MM-dd') === formattedDate && task.user === selectedUser
+          format(new Date(task.createdAt), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') && task.user === selectedUser
         );
         return {
           date,
@@ -230,6 +278,7 @@ const TaskDashboard = () => {
       }
     });
   };
+  
 
   const calculateTotalDuration = () => {
     const monthAttendance = getMonthAttendance();
