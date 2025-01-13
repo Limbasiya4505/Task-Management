@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
-import settingImage from './settingimage.jpg';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import axios from 'axios';
-import { format, isSunday, eachWeekOfInterval } from 'date-fns';
+import { format, isSunday, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -16,14 +15,17 @@ const TaskDashboard = () => {
   const [attendanceStats, setAttendanceStats] = useState({ present: 0, absent: 0 });
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState('');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const holidays = [/* Array of holidays */];
-  const sundays = eachWeekOfInterval({
-    start: new Date(2025, 0, 1),
-    end: new Date(2025, 11, 31),
-  }).map((date) => format(date, 'yyyy-MM-dd'));
-
-  const allHolidaysAndSundays = [...holidays, ...sundays];
+  const holidays = [
+    '2025-01-14', // Makar Sankranti
+    '2025-01-26', // Republic Day
+    '2025-02-18', // Maha Shivaratri
+    '2025-03-22', // Holi
+    '2025-04-14', // Dr. B.R. Ambedkar Jayanti
+    '2025-05-01', // Labour Day
+    '2025-06-15', // Example Holiday for June 2025
+  ];
 
   const handleInputChange = (event) => {
     setSearchTerm(event.target.value);
@@ -54,25 +56,22 @@ const TaskDashboard = () => {
 
   useEffect(() => {
     if (selectedUser) {
-      const selectedUserTasks = tasks.filter((task) => task.user === selectedUser);
-      setFilteredTasks(selectedUserTasks);
-
-      const present = selectedUserTasks.filter((task) => task.startTime && task.endTime).length;
-      const absent = selectedUserTasks.length - present;
-      setAttendanceStats({ present, absent });
+      const userFilteredTasks = tasks.filter(task => task.user === selectedUser);
+      setFilteredTasks(userFilteredTasks);
     } else {
       setFilteredTasks(tasks);
-      const present = tasks.filter((task) => task.startTime && task.endTime).length;
-      const absent = tasks.length - present;
-      setAttendanceStats({ present, absent });
     }
   }, [selectedUser, tasks]);
+
+  useEffect(() => {
+    updateAttendanceStats();
+  }, [selectedUser, tasks, currentMonth]);
 
   const pieChartData = {
     labels: ['Present', 'Absent'],
     datasets: [{
       data: [attendanceStats.present, attendanceStats.absent],
-      backgroundColor: ['#2E7D32', '#98FB98'],
+      backgroundColor: ['#2E7D32', '#FF5722'],
       borderWidth: 0,
     }],
   };
@@ -85,31 +84,110 @@ const TaskDashboard = () => {
     },
   };
 
-  const isHoliday = (date) => allHolidaysAndSundays.includes(format(date, 'yyyy-MM-dd'));
+  const isHoliday = (date) => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return holidays.includes(formattedDate);
+  };
 
+  // Function to calculate duration between start and end time
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return 'N/A';
+
+    const startParts = startTime.split(':');
+    const endParts = endTime.split(':');
+
+    if (startParts.length !== 2 || endParts.length !== 2) return 'N/A';
+
+    const start = new Date(`1970-01-01T${startTime}:00`);
+    const end = new Date(`1970-01-01T${endTime}:00`);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'N/A';
+
+    const durationMs = end - start;
+    if (durationMs <= 0) return 'N/A';
+
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hours} hours ${minutes} minutes`;
+  };
+
+  
   const downloadPDF = () => {
+    if (!selectedUser) {
+      alert('Please select a user to generate the report.');
+      return;
+    }
+  
     const doc = new jsPDF();
-    doc.text('My Attendance Report', 14, 10);
-    doc.autoTable({
-      head: [['Date', 'In Time', 'Out Time']],
-      body: filteredTasks.map((record) => {
-        const recordDate = format(new Date(record.createdAt), 'dd-MM-yyyy');
-        const holiday = isHoliday(new Date(record.createdAt));
-        const sunday = isSunday(new Date(record.createdAt));
-        if (holiday) {
-          return [recordDate, 'Holiday', 'Holiday'];
-        } else if (sunday) {
-          return [recordDate, 'Sunday', 'Sunday'];
-        } else {
-          return [
-            recordDate,
-            format(new Date(record.startTime), 'HH:mm'),
-            format(new Date(record.endTime), 'HH:mm'),
-          ];
-        }
-      }),
+    const userName = getUserById(selectedUser);
+    const reportTitle = `Attendance Report for ${userName} (${format(currentMonth, 'MMMM yyyy')})`;
+  
+    // Title Section
+    doc.setFontSize(18);
+    doc.text(reportTitle, 14, 20);
+  
+    // Summary Section
+    const summaryYPosition = 30;
+    doc.setFontSize(12);
+    doc.text("Summary:", 14, summaryYPosition);
+    doc.text(`- Present: ${attendanceStats.present}`, 14, summaryYPosition + 10);
+    doc.text(`- Absent: ${attendanceStats.absent}`, 14, summaryYPosition + 20);
+  
+    // Optional Custom Section
+    doc.text("Additional Notes:", 14, summaryYPosition + 30);
+    doc.text("All tasks are recorded by the selected user, and holidays and Sundays are also accounted for.", 14, summaryYPosition + 40);
+  
+    // First table (Summary)
+    let yPosition = doc.autoTable({
+      startY: summaryYPosition + 50,
+      styles: { cellPadding: 3, fontSize: 10 },
+      headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
+      bodyStyles: { lineColor: [200, 200, 200], lineWidth: 0.1 },
+      tableWidth: 'wrap',
+      margin: { horizontal: 10 },
+    }).finalY || summaryYPosition + 60;  // Store the Y position and provide fallback
+  
+    const tableDataWithTime = getMonthAttendance().map((record) => {
+      let duration = 'N/A';
+      if (record.status === 'Present' && record.startTime && record.endTime) {
+        // Extract just the time portion (HH:mm) from the full timestamp
+        const startTime = record.startTime.split(':').slice(0, 2).join(':');
+        const endTime = record.endTime.split(':').slice(0, 2).join(':');
+        duration = calculateDuration(startTime, endTime);
+      }
+      return [
+        format(record.date, 'dd-MM-yyyy'),
+        record.status,
+        record.status === 'Present' ? record.startTime || 'N/A' : 'N/A',
+        record.status === 'Present' ? record.endTime || 'N/A' : 'N/A',
+        duration
+      ];
     });
-    doc.save('Attendance_Report_2025.pdf');
+  
+    // Second table (Attendance details)
+    doc.autoTable({
+      startY: yPosition + 10,
+      head: [['Date', 'Status', 'Start Time', 'End Time', 'Duration']],
+      body: tableDataWithTime,
+      styles: { cellPadding: 3, fontSize: 10 },
+      headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
+      bodyStyles: { lineColor: [200, 200, 200], lineWidth: 0.1 },
+      tableWidth: 'wrap',
+      margin: { top: 20, left: 10, right: 10 },
+    });
+  
+    // Footer Section with Page Numbers
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.text(`Page ${i} of ${pageCount}`, 200, 290, { align: 'right' });
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 290);
+    }
+  
+    // Save PDF
+    doc.save(`Attendance_Report_${userName}.pdf`);
   };
 
   const handleUserChange = (event) => {
@@ -118,14 +196,70 @@ const TaskDashboard = () => {
   };
 
   const getUserById = (_id) => {
-    if (!users || users.length === 0) {
-      console.log('Users not loaded yet');
-      return 'Unknown User';
-    }
-
     const user = users.find(user => user._id === _id);
-
     return user ? user.name : 'Unknown User';
+  };
+
+  const updateAttendanceStats = () => {
+    const monthAttendance = getMonthAttendance();
+    const present = monthAttendance.filter(record => record.status === 'Present' || record.status === 'Sunday' || record.status === 'Holiday').length;
+    const absent = monthAttendance.filter(record => record.status === 'Absent').length;
+    setAttendanceStats({ present, absent });
+  };
+
+  const getMonthAttendance = () => {
+    const firstDayOfMonth = startOfMonth(currentMonth);
+    const lastDayOfMonth = endOfMonth(currentMonth);
+
+    const daysInMonth = eachDayOfInterval({
+      start: firstDayOfMonth,
+      end: lastDayOfMonth,
+    });
+
+    return daysInMonth.map(date => {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      if (isHoliday(date)) {
+        return { date, status: 'Holiday', startTime: null, endTime: null };
+      } else if (isSunday(date)) {
+        return { date, status: 'Sunday', startTime: null, endTime: null };
+      } else {
+        const taskForDay = tasks.find(task =>
+          format(new Date(task.createdAt), 'yyyy-MM-dd') === formattedDate && task.user === selectedUser
+        );
+        return {
+          date,
+          status: taskForDay ? 'Present' : 'Absent',
+          startTime: taskForDay ? format(new Date(taskForDay.startTime), 'HH:mm:ss') : null,
+          endTime: taskForDay ? format(new Date(taskForDay.endTime), 'HH:mm:ss') : null,
+        };
+      }
+    });
+  };
+
+  const calculateTotalDuration = () => {
+    const monthAttendance = getMonthAttendance();
+    let totalMinutes = 0;
+
+    monthAttendance.forEach(record => {
+      if (record.status === 'Present' && record.startTime && record.endTime) {
+        const start = new Date(`1970-01-01T${record.startTime}`);
+        const end = new Date(`1970-01-01T${record.endTime}`);
+        const duration = (end - start) / (1000 * 60); // duration in minutes
+        totalMinutes += duration;
+      }
+    });
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours} hours ${minutes} minutes`;
+  };
+
+  const previousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
   };
 
   return (
@@ -133,7 +267,7 @@ const TaskDashboard = () => {
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
-          <div style={{ display: "flex ", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
             <div style={{ ...styles.activeLink, cursor: "pointer" }} onClick={() => console.log("Navigate to HOME")}>HOME</div>
             <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
             <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
@@ -150,7 +284,7 @@ const TaskDashboard = () => {
         </form>
 
         <div>
-          <select id="user-select" value={selectedUser } onChange={handleUserChange} style={styles.dropdown}>
+          <select id="user-select" value={selectedUser} onChange={handleUserChange} style={styles.dropdown}>
             <option value="">--Select a User--</option>
             {users.map(user => (
               <option key={user._id} value={user._id}>{user.name}</option>
@@ -201,51 +335,63 @@ const TaskDashboard = () => {
             </div>
 
             <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', marginTop: '10px', backgroundColor: 'white' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-                <h3 style={{ margin: 0 }}>My Attendance</h3>
-                <button onClick={downloadPDF} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '5px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <img style={{ width: '20px', height: '20px', marginRight: '8px' }} src="/images/download-icon.png" alt="Download" />
-                  Download PDF
-                </button>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <h3>{selectedUser ? `Attendance for ${getUserById(selectedUser)}` : 'My Attendance'}</h3>
+                {/* Add Download Button */}
+                <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                  <button
+                    onClick={downloadPDF}
+                    style={{
+                      ...styles.button,
+                      backgroundColor: selectedUser ? '#28a745' : '#ccc',
+                      cursor: selectedUser ? 'pointer' : 'not-allowed',
+                    }}
+                    disabled={!selectedUser}
+                  >
+                    Download Attendance Report
+                  </button>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                  <button onClick={previousMonth} style={styles.button}>Previous</button>
+                  <span>{format(currentMonth, 'MMMM yyyy')}</span>
+                  <button onClick={nextMonth} style={styles.button}>Next</button>
+                </div>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                    <th colSpan="2" style={{ padding: '10px', textAlign: 'center' }}>Punch Time</th>
-                  </tr>
-                  <tr>
-                    <th></th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>In Time</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>Out Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTasks.map((record, index) => {
-                    const recordDate = new Date(record.createdAt);
-                    const holiday = isHoliday(recordDate);
-                    const sunday = isSunday(recordDate);
-                    return (
-                      <tr key={index}>
-                        <td style={{ padding: '10px' }}>{format(recordDate, 'dd-MM-yyyy')}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }} colSpan="2">
-                          {holiday ? (
-                            <span style={{ backgroundColor: '#40C4FF', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>Holiday</span>
-                          ) : sunday ? (
-                            <span style={{ backgroundColor: '#FFB74D', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>Sunday</span>
-                          ) : (
-                            <>
-                              <span style={{ backgroundColor: '#2E7D32', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>{format(new Date(record.startTime), 'HH:mm')}</span>
-                              &nbsp; &nbsp;
-                              <span style={{ backgroundColor: '#2E7D32', color: 'white', padding: '3px 8px', borderRadius: '3px' }}>{format(new Date(record.endTime), 'HH:mm')}</span>
-                            </>
-                          )}
-                        </td>
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                {selectedUser ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: '10px', border: '1px solid #ccc' }}>Date</th>
+                        <th style={{ padding: '10px', border: '1px solid #ccc', textAlign: 'center' }}>Status</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {getMonthAttendance().map((record, index) => (
+                        <tr key={index}>
+                          <td style={{ padding: '10px', border: '1px solid #ccc' }}>{format(record.date, 'dd-MM-yyyy')}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ccc', textAlign: 'center' }}>
+                            <span style={{
+                              backgroundColor:
+                                record.status === 'Present' ? '#2E7D32' :
+                                  record.status === 'Absent' ? '#FF5722' :
+                                    record.status === 'Holiday' ? '#40C4FF' :
+                                      '#FFB74D',
+                              color: 'white',
+                              padding: '3px 8px',
+                              borderRadius: '3px'
+                            }}>
+                              {record.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ textAlign: 'center' }}>Please select a user to view their attendance.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -258,7 +404,7 @@ const styles = {
   container: {
     minHeight: '100vh',
     backgroundColor: '#f5f5f5',
-    backgroundImage: `url(${settingImage})`,
+    backgroundImage: `url('/images/setting-image.jpg')`,
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'cover',
     fontFamily: 'Arial, sans-serif'
@@ -299,11 +445,18 @@ const styles = {
   dropdown: {
     width: '30%',
     padding: '10px',
-    borderRadius: '5px',
     border: '1px solid #ccc',
     margin: '10px 0',
     backgroundColor: 'white',
     fontSize: '16px'
+  },
+  button: {
+    padding: '8px 16px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
   }
 };
 
