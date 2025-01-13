@@ -42,8 +42,12 @@ const TaskDashboard = () => {
   useEffect(() => {
     axios.get('http://localhost:8000/api/tasks')
       .then((response) => {
-        setTasks(response.data);
-        setFilteredTasks(response.data);
+        // Remove duplicate tasks based on task ID
+        const uniqueTasks = response.data.filter((task, index, self) =>
+          index === self.findIndex((t) => t._id === task._id)
+        );
+        setTasks(uniqueTasks);
+        setFilteredTasks(uniqueTasks);
       })
       .catch((err) => console.log(err));
 
@@ -71,7 +75,7 @@ const TaskDashboard = () => {
     labels: ['Present', 'Absent'],
     datasets: [{
       data: [attendanceStats.present, attendanceStats.absent],
-      backgroundColor: ['#2E7D32', '#FF5722'],
+      backgroundColor: ['#2E7D32', '#98FB98'],
       borderWidth: 0,
     }],
   };
@@ -89,7 +93,6 @@ const TaskDashboard = () => {
     return holidays.includes(formattedDate);
   };
 
-  // Function to calculate duration between start and end time
   const calculateDuration = (startTime, endTime) => {
     if (!startTime || !endTime) return 'N/A';
 
@@ -109,49 +112,43 @@ const TaskDashboard = () => {
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
     const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
-    return `${hours} hours ${minutes} minutes`;
+    return `${hours} Hour ${minutes} Minute`;
   };
 
-  
   const downloadPDF = () => {
     if (!selectedUser) {
       alert('Please select a user to generate the report.');
       return;
     }
   
-    const doc = new jsPDF();
+    const doc = new jsPDF(); // A4 page size in portrait orientation
     const userName = getUserById(selectedUser);
     const reportTitle = `Attendance Report for ${userName} (${format(currentMonth, 'MMMM yyyy')})`;
   
-    // Title Section
+    // Set font size and title position
     doc.setFontSize(18);
     doc.text(reportTitle, 14, 20);
   
-    // Summary Section
     const summaryYPosition = 30;
     doc.setFontSize(12);
     doc.text("Summary:", 14, summaryYPosition);
     doc.text(`- Present: ${attendanceStats.present}`, 14, summaryYPosition + 10);
     doc.text(`- Absent: ${attendanceStats.absent}`, 14, summaryYPosition + 20);
   
-    // Optional Custom Section
-    doc.text("Additional Notes:", 14, summaryYPosition + 30);
-    doc.text("All tasks are recorded by the selected user, and holidays and Sundays are also accounted for.", 14, summaryYPosition + 40);
-  
-    // First table (Summary)
+    // Adjust the start position for the first table (Summary Table)
     let yPosition = doc.autoTable({
-      startY: summaryYPosition + 50,
+      startY: summaryYPosition + 30, // Space between summary and table
       styles: { cellPadding: 3, fontSize: 10 },
       headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
       bodyStyles: { lineColor: [200, 200, 200], lineWidth: 0.1 },
-      tableWidth: 'wrap',
+      tableWidth: 'wrap',  // Table will adjust its width automatically
       margin: { horizontal: 10 },
-    }).finalY || summaryYPosition + 60;  // Store the Y position and provide fallback
+    }).finalY || summaryYPosition + 40;
   
+    // Table data with attendance records including duration
     const tableDataWithTime = getMonthAttendance().map((record) => {
       let duration = 'N/A';
       if (record.status === 'Present' && record.startTime && record.endTime) {
-        // Extract just the time portion (HH:mm) from the full timestamp
         const startTime = record.startTime.split(':').slice(0, 2).join(':');
         const endTime = record.endTime.split(':').slice(0, 2).join(':');
         duration = calculateDuration(startTime, endTime);
@@ -165,19 +162,17 @@ const TaskDashboard = () => {
       ];
     });
   
-    // Second table (Attendance details)
+    // Adjust the second table (Attendance Table) position
     doc.autoTable({
-      startY: yPosition + 10,
+      startY: yPosition + 10, // Adding spacing before next table
       head: [['Date', 'Status', 'Start Time', 'End Time', 'Duration']],
       body: tableDataWithTime,
       styles: { cellPadding: 3, fontSize: 10 },
       headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
       bodyStyles: { lineColor: [200, 200, 200], lineWidth: 0.1 },
-      tableWidth: 'wrap',
-      margin: { top: 20, left: 10, right: 10 },
     });
   
-    // Footer Section with Page Numbers
+    // Footer with page numbers and generation date
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -186,7 +181,7 @@ const TaskDashboard = () => {
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 290);
     }
   
-    // Save PDF
+    // Save the PDF
     doc.save(`Attendance_Report_${userName}.pdf`);
   };
 
@@ -244,7 +239,7 @@ const TaskDashboard = () => {
       if (record.status === 'Present' && record.startTime && record.endTime) {
         const start = new Date(`1970-01-01T${record.startTime}`);
         const end = new Date(`1970-01-01T${record.endTime}`);
-        const duration = (end - start) / (1000 * 60); // duration in minutes
+        const duration = (end - start) / (1000 * 60);
         totalMinutes += duration;
       }
     });

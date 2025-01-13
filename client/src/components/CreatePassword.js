@@ -40,7 +40,7 @@ function PasswordReset() {
       });
 
       alert(response.data.message);
-      navigate('/login');
+      navigate('/');
     } catch (err) {
       console.error("Error resetting password:", err);
       setError(err.response?.data?.message || "Something went wrong. Please try again.");
