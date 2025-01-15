@@ -7,6 +7,7 @@ import OTPVerification from './components/OTPVerification';
 import CreatePassword from './components/CreatePassword';
 import TaskManager from './components/TaskManager';
 import TaskDashboard from './components/TaskDashboard';
+import TaskDescription from './components/TaskDescription';
 
 function App() {
   return (
@@ -20,8 +21,8 @@ function App() {
           <Route path="/OTPVerification" element={<OTPVerification />} />
           <Route path="/CreatePassword" element={<CreatePassword />} />
           <Route path="/TaskManager" element={<TaskManager />} />
-          <Route path="/TaskDashboard" element={<TaskDashboard />} />
-          
+          <Route path="/TaskDashboard" element={<TaskDashboard />} />
+          <Route path="/TaskDescription" element={<TaskDescription />} />
         </Routes>
       </div>
     </Router>

@@ -38,7 +38,7 @@ const TaskDashboard = () => {
     '2025-11-19', // Guru Nanak Jayanti
     '2025-12-25', // Christmas Day
   ];
-  
+
 
   const handleInputChange = (event) => {
     setSearchTerm(event.target.value);
@@ -104,7 +104,7 @@ const TaskDashboard = () => {
   const isHoliday = (date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     const holiday = holidays.find(h => h === formattedDate);
-    
+
     if (holiday) {
       const holidayNames = {
         '2025-01-14': 'Makar Sankranti',
@@ -121,11 +121,9 @@ const TaskDashboard = () => {
         '2025-08-09': 'Raksha Bandhan',
         '2025-08-15': 'Independence Day',
         '2025-08-16': 'Janmashtami',
-        '2025-08-16': 'Parsi New Year',
         '2025-08-27': 'Ganesh Chaturthi',
         '2025-09-05': 'Eid e Milad',
         '2025-10-02': 'Gandhi Jayanti',
-        '2025-10-02': 'Vijaya Dashami',
         '2025-10-21': 'Diwali',
         '2025-10-22': 'Govardhan Puja',
         '2025-10-27': 'Chhat Puja',
@@ -133,12 +131,12 @@ const TaskDashboard = () => {
         '2025-11-19': 'Guru Nanak Jayanti',
         '2025-12-25': 'Christmas Day'
       };
-      
+
       return holidayNames[holiday];
     }
     return null;
   };
-  
+
 
   const calculateDuration = (startTime, endTime) => {
     if (!startTime || !endTime) return 'N/A';
@@ -167,21 +165,21 @@ const TaskDashboard = () => {
       alert('Please select a user to generate the report.');
       return;
     }
-  
+
     const doc = new jsPDF(); // A4 page size in portrait orientation
     const userName = getUserById(selectedUser);
     const reportTitle = `Attendance Report for ${userName} (${format(currentMonth, 'MMMM yyyy')})`;
-  
+
     // Set font size and title position
     doc.setFontSize(18);
     doc.text(reportTitle, 14, 20);
-  
+
     const summaryYPosition = 30;
     doc.setFontSize(12);
     doc.text("Summary:", 14, summaryYPosition);
     doc.text(`- Present: ${attendanceStats.present}`, 14, summaryYPosition + 10);
     doc.text(`- Absent: ${attendanceStats.absent}`, 14, summaryYPosition + 20);
-  
+
     // Adjust the start position for the first table (Summary Table)
     let yPosition = doc.autoTable({
       startY: summaryYPosition + 30, // Space between summary and table
@@ -191,7 +189,7 @@ const TaskDashboard = () => {
       tableWidth: 'wrap',  // Table will adjust its width automatically
       margin: { horizontal: 10 },
     }).finalY || summaryYPosition + 40;
-  
+
     // Table data with attendance records including duration
     const tableDataWithTime = getMonthAttendance().map((record) => {
       let duration = 'N/A';
@@ -208,7 +206,7 @@ const TaskDashboard = () => {
         duration
       ];
     });
-  
+
     // Adjust the second table (Attendance Table) position
     doc.autoTable({
       startY: yPosition + 10, // Adding spacing before next table
@@ -218,7 +216,7 @@ const TaskDashboard = () => {
       headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
       bodyStyles: { lineColor: [200, 200, 200], lineWidth: 0.1 },
     });
-  
+
     // Footer with page numbers and generation date
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -227,7 +225,7 @@ const TaskDashboard = () => {
       doc.text(`Page ${i} of ${pageCount}`, 200, 290, { align: 'right' });
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 290);
     }
-  
+
     // Save the PDF
     doc.save(`Attendance_Report_${userName}.pdf`);
   };
@@ -252,15 +250,15 @@ const TaskDashboard = () => {
   const getMonthAttendance = () => {
     const firstDayOfMonth = startOfMonth(currentMonth);
     const lastDayOfMonth = endOfMonth(currentMonth);
-  
+
     const daysInMonth = eachDayOfInterval({
       start: firstDayOfMonth,
       end: lastDayOfMonth,
     });
-  
+
     return daysInMonth.map(date => {
       const holidayName = isHoliday(date);
-      
+
       if (holidayName) {
         return { date, status: `${holidayName}`, startTime: null, endTime: null };
       } else if (isSunday(date)) {
@@ -278,7 +276,6 @@ const TaskDashboard = () => {
       }
     });
   };
-  
 
   const calculateTotalDuration = () => {
     const monthAttendance = getMonthAttendance();
@@ -311,10 +308,15 @@ const TaskDashboard = () => {
       <nav style={styles.nav}>
         <div style={styles.logo}>i</div>
         <div style={styles.navLinks}>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <div style={{ ...styles.activeLink, cursor: "pointer" }} onClick={() => console.log("Navigate to HOME")}>HOME</div>
-            <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to ABOUT ME")}>ABOUT ME</div>
-            <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to PROJECT")}>PROJECT</div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div
+              style={{ ...styles.activeLink, cursor: 'pointer' }}
+              onClick={() => console.log('Navigate to HOME')}>
+              HOME
+            </div>
+            <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to TASK")}>
+              <a href="/TaskDescription" style={{ textDecoration: "none", color: "#666" }}>TASK</a>
+            </div>
           </div>
         </div>
       </nav>
