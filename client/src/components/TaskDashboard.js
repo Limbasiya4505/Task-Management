@@ -5,6 +5,7 @@ import axios from 'axios';
 import { format, isSunday, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import TaskDescription from './TaskDescription';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -16,7 +17,14 @@ const TaskDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
+  const handleAddTask = (taskData) => {
+    // You can handle adding the task here, e.g., send a request to your backend
+    // and update state accordingly
+    console.log('Adding task:', taskData);
+    setIsPopupOpen(false); // Close the popup after adding task
+  };
   const holidays = [
     '2025-01-14', // Makar Sankranti
     '2025-01-26', // Republic Day
@@ -277,24 +285,6 @@ const TaskDashboard = () => {
     });
   };
 
-  const calculateTotalDuration = () => {
-    const monthAttendance = getMonthAttendance();
-    let totalMinutes = 0;
-
-    monthAttendance.forEach(record => {
-      if (record.status === 'Present' && record.startTime && record.endTime) {
-        const start = new Date(`1970-01-01T${record.startTime}`);
-        const end = new Date(`1970-01-01T${record.endTime}`);
-        const duration = (end - start) / (1000 * 60);
-        totalMinutes += duration;
-      }
-    });
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours} hours ${minutes} minutes`;
-  };
-
   const previousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
   };
@@ -330,12 +320,45 @@ const TaskDashboard = () => {
         </form>
 
         <div>
-          <select id="user-select" value={selectedUser} onChange={handleUserChange} style={styles.dropdown}>
-            <option value="">--Select a User--</option>
-            {users.map(user => (
-              <option key={user._id} value={user._id}>{user.name}</option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <select id="user-select" value={selectedUser} onChange={handleUserChange} style={styles.dropdown}>
+              <option value="">--Select a User--</option>
+              {users.map(user => (
+                <option key={user._id} value={user._id}>{user.name}</option>
+              ))}
+            </select>
+            <div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => setIsPopupOpen(true)}
+                  style={{
+                    backgroundColor: 'green',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    width: '40px', // Fixed width
+                    height: '40px', // Fixed height
+                    fontSize: '25px', // Font size for "+"
+                    display: 'flex', // Center alignment
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    transition: 'background-color 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => (e.target.style.backgroundColor = 'darkgreen')}
+                  onMouseLeave={(e) => (e.target.style.backgroundColor = 'green')}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+
+            {/* Render the TaskPopup component */}
+            <TaskDescription isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} onSubmit={handleAddTask} />
+          </div>
+
         </div>
 
         <div style={{ display: 'flex', gap: '20px' }}>
@@ -503,7 +526,19 @@ const styles = {
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
+  },
+  iconButton: {
+    padding: '8px',
+    backgroundColor: 'transparent',
+    color: '#007bff',
+    border: '1px solid #007bff',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 };
 
 export default TaskDashboard;
+

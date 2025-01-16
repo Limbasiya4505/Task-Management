@@ -492,3 +492,74 @@
 .card ul li {
   list-style-type: disc;
 }
+
+/* TaskPopup.css */
+
+.popup-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  padding: 20px;
+}
+
+.popup-overlay.show {
+  display: block;
+}
+
+.popup-container {
+  background-color: white;
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.popup-header {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.popup-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.popup-form input,
+.popup-form textarea {
+  width: 97%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.popup-actions {
+  text-align: right;
+}
+
+.popup-actions button {
+  margin-left: 10px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.popup-actions button[type="button"] {
+  background-color: #f0f0f0;
+}
+
+.popup-actions button[type="submit"] {
+  background-color: #4caf50;
+  color: white;
+}
+
+.popup-actions button:hover {
+  opacity: 0.8;
+}
