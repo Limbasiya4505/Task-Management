@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Trash } from 'react-feather'; // Icons for buttons
-import settingImage from './settingimage.jpg'; // Ensure this image exists in your project
-import axios from 'axios'; // For HTTP requests
-import { useNavigate } from 'react-router-dom'; // For navigation
+import { Plus, Search, Trash } from 'react-feather';
+import settingImage from './settingimage.jpg';
+import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
+import TaskDescription from './TaskDescription';
+import img from './imbuesoft.jpg';
 
 const TaskManager = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { taskDescription } = location.state || { taskDescription: '' };
 
   const [selectedTask, setSelectedTask] = useState('');
   const [learningNotes, setLearningNotes] = useState('');
@@ -19,69 +23,68 @@ const TaskManager = () => {
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const [user, setUser ] = useState({ _id: null, name: '' });
-
-  const tasks = [
-    {
-      id: 1,
-      name: 'FrontEnd Developer',
-      description: [
-        'Designing user interfaces',
-        'Developing interactive technology',
-        'Building reusable components',
-        'Optimizing performance',
-        'Collaborating with teams',
-        'Writing clean code',
-        'Troubleshooting and debugging',
-        'Participating in code reviews',
-        'Staying up-to-date with industry trends',
-        'Providing documentation',
-      ],
-    },
-    { id: 2, name: 'Backend Developer', description: [] },
-    { id: 3, name: 'UI & UX Designer', description: [] },
-    { id: 4, name: 'Android Developer', description: [] },
-    { id: 5, name: 'Python Developer', description: [] },
-  ];
+  const [taskDescriptions, setTaskDescriptions] = useState([]);
+  const [selectedTaskDescription, setSelectedTaskDescription] = useState({ title: '', description: '', status: 'Pending' });
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [newTaskDescription, setTaskDescription] = useState({ title: '', description: '' });
+  const [users, setUsers] = useState([]);
+  const [loggedInUser , setLoggedInUser ] = useState({});
+  const [selectedUserName, setSelectedUserName] = useState('');
 
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // First, let's check if we have a token
-    console.log('Token:', localStorage.getItem('token'));
-  
     const fetchUserData = async () => {
       try {
-        // Check if we're making the API call
-        console.log('Starting API call');
-        
         const response = await axios.get('http://localhost:8000/api/user-details', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        
-        setUser({ _id: response.data.data._id, name: response.data.data.name });
-        console.log(response.data.data._id)
+        setUser ({ _id: response.data.data._id, name: response.data.data.name });
       } catch (error) {
         console.error('API Error:', error.message);
-        console.error('Full error:', error);
       }
     };
-  
+
+    const fetchTaskDescriptions = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/descriptions');
+        setTaskDescriptions(response.data);
+      } catch (error) {
+        console.error('Error fetching task descriptions:', error);
+      }
+    };
+
     if (token) {
       fetchUserData();
-    } else {
-      console.log('No token found!');
+      fetchTaskDescriptions();
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const fetchLoggedInUser  = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/user-details', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setLoggedInUser (response.data.data);
+      } catch (error) {
+        console.error('API Error:', error.message);
+      }
+    };
+
+    if (token) {
+      fetchLoggedInUser ();
     }
   }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const selectedTaskData = tasks.find(task => task.id === parseInt(selectedTask));
-
     const taskData = {
-      name: selectedTask ? selectedTaskData.name : '',
       learning: learningNotes,
       startTime: startTime,
       endTime: endTime,
@@ -91,6 +94,7 @@ const TaskManager = () => {
         endTime: block.time.split(' to ')[1],
         notes: block.description,
       })),
+      status: selectedTaskDescription.status,
     };
 
     try {
@@ -103,6 +107,19 @@ const TaskManager = () => {
       navigate('/TaskManager');
     } catch (error) {
       console.error('Error saving task:', error);
+    }
+  };
+
+  const handleAddTask = async (taskData) => {
+    try {
+      const response = await axios.post('http://localhost:8000/api/descriptions', {
+        ...taskData,
+        user: loggedInUser ._id,
+      });
+      setTaskDescriptions([...taskDescriptions, response.data]);
+      setIsPopupOpen(false);
+    } catch (error) {
+      console.error('Error adding task:', error);
     }
   };
 
@@ -130,12 +147,12 @@ const TaskManager = () => {
 
   const handleStart = () => {
     setIsRunning(true);
-    setStartTime(new Date().toISOString()); // Record the start time
+    setStartTime(new Date().toISOString());
   };
 
   const handleStop = () => {
     setIsRunning(false);
-    setEndTime(new Date().toISOString()); // Record the end time
+    setEndTime(new Date().toISOString());
   };
 
   const formatTime = (time) => {
@@ -154,22 +171,10 @@ const TaskManager = () => {
       nextEnd.setHours(nextEnd.getHours() + 1);
     } else {
       const [, end] = timeBlocks[timeBlocks.length - 1].time.split(' to ');
-      const isValidTime = (time) => {
-        const timePattern = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
-        return timePattern.test(time);
-      };
-
-      if (isValidTime(end)) {
-        nextStart = new Date(`1970-01-01T${end}`);
-        nextStart.setSeconds(0);
-
-        nextEnd = new Date(nextStart);
-        nextEnd.setHours(nextEnd.getHours() + 1);
-      } else {
-        nextStart = new Date('1970-01-01T09:00:00');
-        nextEnd = new Date(nextStart);
-        nextEnd.setHours(nextEnd.getHours() + 1);
-      }
+      nextStart = new Date(`1970-01-01T${end}`);
+      nextStart.setSeconds(0);
+      nextEnd = new Date(nextStart);
+      nextEnd.setHours(nextEnd.getHours() + 1);
     }
 
     const newBlock = {
@@ -183,79 +188,99 @@ const TaskManager = () => {
     setTimeBlocks([...timeBlocks, newBlock]);
   };
 
+  const handleTaskChange = (e) => {
+    const taskId = e.target.value;
+    setSelectedTask(taskId);
+    const selectedTaskData = taskDescriptions.find(task => task._id === taskId);
+    setSelectedTaskDescription({ title: selectedTaskData?.title, description: selectedTaskData?.description, status: selectedTaskData?.status });
+    const user = users.find(user => user._id === selectedTaskData?.user);
+    setUser (user);
+  };
+
+  const handleUserChange = (e) => {
+    const selectedUserId = e.target.value;
+    setSelectedUserName(selectedUserId);
+    const user = users.find(user => user._id === selectedUserId);
+    setUser (user);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/'); // Redirect to login page
+  };
+
+  // Filter tasks assigned to the logged-in user
+  const assignedTasks = taskDescriptions.filter(task => task.user === loggedInUser ._id);
+
+  const handleStatusChange = (taskId, e) => {
+    const newStatus = e.target.value;
+    setTaskDescriptions((prev) =>
+      prev.map((task) =>
+        task._id === taskId ? { ...task, status: newStatus } : task
+      )
+    );
+    setSelectedTaskDescription((prev) => ({ ...prev, status: newStatus }));
+  };
+
   return (
     <div style={styles.container}>
       <nav style={styles.nav}>
-        <div style={styles.logo}>i</div>
+        <img src={img} style={{ height: '50px' }} alt="Logo" />
         <div style={styles.navLinks}>
           <div style={{ display: 'flex', gap: '10px' }}>
             <div
               style={{ ...styles.activeLink, cursor: 'pointer' }}
-              onClick={() => console.log('Navigate to HOME')}
-            >
-              HOME
-            </div>
+              onClick={() => console.log('Navigate to HOME')}>HOME</div>
             <div
               style={{ ...styles.link, cursor: 'pointer' }}
-              onClick={() => console.log('Navigate to ABOUT ME')}
-            >
-              ABOUT ME
-            </div>
+              onClick={() => console.log('Navigate to ABOUT ME')}>ABOUT ME</div>
             <div
               style={{ ...styles.link, cursor: 'pointer' }}
-              onClick={() => console.log('Navigate to PROJECT')}
-            >
-              PROJECT
-            </div>
+              onClick={() => console.log('Navigate to PROJECT')}>PROJECT</div>
           </div>
         </div>
-        <button style={styles.searchButton}>
-          <Search size={20} />
+
+        <button style={styles.logoutButton} onClick={handleLogout}>
+          Logout
         </button>
       </nav>
 
       <div style={styles.content}>
         <div style={styles.taskSection}>
-        <h2>Welcome, {user.name}</h2>
-        
-          <select
-            value={selectedTask}
-            onChange={(e) => setSelectedTask(e.target.value)}
-            style={styles.select}>
-            <option value="">Select Task</option>
-            {tasks.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.name}
-              </option>
-            ))}
-          </select>
+          <h2>Welcome, {user.name}</h2>
 
-          <input 
-            type="text" 
-            value={selectedTask ? tasks.find((task) => task.id === parseInt(selectedTask))?.name : ""} 
-            style={styles.taskInput} 
-            readOnly 
-          />
-
-          <div style={styles.descriptionSection}>
-            <h3 style={styles.sectionTitle}>Description:</h3>
-            <ul style={styles.descriptionList}>
-              {tasks[0].description.map((item, index) => (
-                <li key={index} style={styles.descriptionItem}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div style={styles.descriptionSection}>
-            <h3 style={styles.sectionTitle}>Learning:</h3>
+          <div style={styles.learningNotesContainer}>
+            <h3 style={styles.sectionTitle}>Learning Notes:</h3>
             <textarea
               placeholder="Type here...."
               value={learningNotes}
               onChange={(e) => setLearningNotes(e.target.value)}
               style={styles.textarea}
             />
+          </div>
+
+          <div style={styles.assignedTasksContainer}>
+            <h2>Assigned Tasks</h2>
+            <div style={styles.scrollableTaskList}>
+              {assignedTasks.slice().reverse().map((task) => (
+                <div key={task._id} style={styles.descriptionSection}>
+                  <div style={styles.taskContent}>
+                    <div style={styles.taskDetails}>
+                      <p style={styles.dateText}>{new Date(task.createdAt).toLocaleDateString()}</p>
+                      <h3 style={styles.sectionTitle}><b>Title:</b> {task.title}</h3>
+                      <p style={styles.descriptionText}><b>Description:</b> {task.description}</p>
+                      <p style={styles.descriptionText}><b>Status:</b> {task.status}
+                        <select value={task.status} onChange={(e) => handleStatusChange(task._id, e)}>
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -311,6 +336,14 @@ const TaskManager = () => {
             </div>
           </form>
         </div>
+        {isPopupOpen && (
+          <TaskDescription
+            isOpen={isPopupOpen}
+            onClose={() => setIsPopupOpen(false)}
+            onSubmit={handleAddTask}
+            user={loggedInUser }
+          />
+        )}
       </div>
     </div>
   );
@@ -330,7 +363,14 @@ const styles = {
     alignItems: 'center',
     padding: '1rem 2rem',
     backgroundColor: 'white',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    justifyContent: 'space-between' // Ensures space between logo and logout button
+  },
+  navLinks: {
+    display: 'flex',
+    gap: '2rem',
+    justifyContent: 'center',
+    flex: 1 // Allows navLinks to take up available space for centering
   },
   logo: {
     width: '36px',
@@ -341,22 +381,20 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontWeight: 'bold'
-  },
-  navLinks: {
-    display: 'flex',
-    gap: '2rem',
-    margin: '0 auto'
+    fontWeight: 'bold',
+    flexShrink: 0 // Prevents the logo from shrinking
   },
   link: {
     textDecoration: 'none',
     color: '#666',
-    fontSize: '14px'
+    fontSize: '14px',
+    cursor: 'pointer'
   },
   activeLink: {
     textDecoration: 'none',
     color: '#007bff',
-    fontSize: '14px'
+    fontSize: '14px',
+    cursor: 'pointer'
   },
   searchButton: {
     background: 'none',
@@ -364,57 +402,62 @@ const styles = {
     cursor: 'pointer',
     color: '#666'
   },
+  logoutButton: {
+    marginLeft: 'auto',
+    padding: '0.5rem 1rem',
+    backgroundColor: '#dc3545',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  },
   content: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '2rem',
-    padding: '2rem',
+    gap: '1rem',
     maxWidth: '1400px',
-    margin: '0 auto'
+    margin: '15px auto'
   },
   taskSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '1.5rem'
+    gap: '10px'
   },
-  select: {
-    padding: '0.75rem',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    width: '300px'
-  },
-  taskInput: {
-    padding: '0.75rem',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    width: '670px'
-  },
-  descriptionSection: {
+  learningNotesContainer: {
     backgroundColor: 'white',
     padding: '1.5rem',
     borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    marginBottom: '2rem',
+  },
+  assignedTasksContainer: {
+    backgroundColor: 'white',
+    padding: '1.5rem',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  },
+  scrollableTaskList: {
+    maxHeight: '500px',
+    overflowY: 'auto',
+  },
+  descriptionSection: {
+    backgroundColor: 'white',
+    alignItems: 'center',
+    padding: '1.5rem',
+    borderRadius: '8px',
+    marginTop: '2rem',
+    width: '90%',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
   },
   sectionTitle: {
     fontSize: '16px',
     marginBottom: '1rem',
     fontWeight: 'normal'
   },
-  descriptionList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0
-  },
-  descriptionItem: {
-    marginBottom: '0.75rem',
+  descriptionText: {
     fontSize: '14px',
     color: '#444',
-    display: 'flex',
-    alignItems: 'flex-start',
-    '&:before': {
-      content: '"•"',
-      marginRight: '0.5rem'
-    }
+    lineHeight: '1.5',
   },
   timeSection: {
     display: 'flex',
@@ -482,7 +525,7 @@ const styles = {
   addButton: {
     width: '48px',
     height: '48px',
-    borderRadius: '50%',
+    borderRadius: ' 50%',
     backgroundColor: '#007bff',
     color: 'white',
     border: 'none',
@@ -506,7 +549,19 @@ const styles = {
     cursor: 'pointer',
     color: '#dc3545',
     marginLeft: 'auto'
-  }
+  },
+  taskContent: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  taskDetails: {
+    flex: 1,
+  },
+  dateText: {
+    marginLeft: '20px',
+    textAlign: 'right',
+  },
 };
 
 export default TaskManager;

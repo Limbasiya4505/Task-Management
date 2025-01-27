@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 
-const TaskDescription = ({ isOpen, onClose, onSubmit }) => {
+const TaskDescription = ({ isOpen, onClose, onSubmit, user }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onSubmit({ title, description });
-    setTitle('');
-    setDescription('');
+    const taskData = { title, description };
+    onSubmit(taskData); // Call the onSubmit function with the taskData
   };
 
   return (

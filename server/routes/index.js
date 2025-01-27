@@ -3,10 +3,11 @@ const registerUser = require('../controller/registerUser');
 const login = require('../controller/login');
 const userDetails = require('../controller/userDetail');
 const logout = require('../controller/logout');
-const updateUserDetails = require('../controller/updateUserDetails');
+// const updateUserDetails = require('../controller/updateUserDetails');
 const ForgotPassword = require('../controller/forgot-password');
 const taskController = require('../controller/TaskController')
-const searchUser = require('../controller/searchUser');
+// const searchUser = require('../controller/searchUser');
+const descriptionController = require('../controller/descriptionController');
 const router = express.Router();
 
 router.post('/register', registerUser);
@@ -23,9 +24,12 @@ router.post('/update_password', ForgotPassword.update_password);
 router.get('/tasks', taskController.getAllTasks);
 router.post('/tasks', taskController.createTask);
 router.get('/tasks/:id', taskController.getTasks);
-// router.post('/tasks/:id/notes', taskController.addNote);
 router.put('/tasks/:id', taskController.updateStatus);
 router.delete('/tasks/:id', taskController.deleteTask);
+
+// descriptions
+router.post('/descriptions', descriptionController.addDescription);
+router.get('/descriptions', descriptionController.getDescriptions);
 
 // router.put('/update-user', updateUserDetails);
 

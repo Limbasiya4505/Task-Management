@@ -34,26 +34,6 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// Add note to task
-// exports.addNote = async (req, res) => {
-//   try {
-//     const task = await Task.findById(req.params.id);
-//     if (!task) {
-//       return res.status(404).json({ error: 'Task not found' });
-//     }
-    
-//     task.notes.push({
-//       time: req.body.time,
-//       content: req.body.content
-//     });
-    
-//     await task.save();
-//     res.json(task);
-//   } catch (error) {
-//     res.status(400).json({ error: error.message });
-//   }
-// };
-
 // Update task status
 exports.updateStatus = async (req, res) => {
   try {

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import axios from 'axios';
 import { format, isSunday, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import TaskDescription from './TaskDescription';
+import TaskDescription from './TaskDescription.js';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -18,35 +18,23 @@ const TaskDashboard = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [taskDescriptions, setTaskDescriptions] = useState([]);
+  const [user, setUser] = useState({}); // Define the user variable
+  const [selectedTaskDescription, setSelectedTaskDescription] = useState('');
 
   const handleAddTask = (taskData) => {
-    // You can handle adding the task here, e.g., send a request to your backend
-    // and update state accordingly
-    console.log('Adding task:', taskData);
-    setIsPopupOpen(false); // Close the popup after adding task
-  };
-  const holidays = [
-    '2025-01-14', // Makar Sankranti
-    '2025-01-26', // Republic Day
-    '2025-02-26', // Maha Shivaratri
-    '2025-03-14', // Holi (2nd Day - Dhuleti)
-    '2025-03-31', // Ramjan-Eid (Eid-Ul-Fitra)
-    '2025-04-10', // Mahavir Janma Kalyanak
-    '2025-04-14', // Dr. B.R. Ambedkar's Birthday
-    '2025-04-18', // Good Friday
-    '2025-04-29', // Bhagvan Shree Parshuram Jayanti
-    '2025-06-07', // Eid-Ul-Adha (Bakri-Eid)
-    '2025-08-15', // Independence Day
-    '2025-08-16', // Janmashtami
-    '2025-08-27', // Ganesh Chaturthi
-    '2025-10-02', // Gandhi Jayanti
-    '2025-10-21', // Diwali
-    '2025-10-22', // Vikram Samvat New Year
-    '2025-10-23', // Bhai Dooj
-    '2025-11-19', // Guru Nanak Jayanti
-    '2025-12-25', // Christmas Day
-  ];
+    if (!user._id) {
+      console.error('User ID is not defined');
+      return;
+    }
 
+    axios.post('http://localhost:8000/api/descriptions', { ...taskData, user: user._id })
+      .then((response) => {
+        setIsPopupOpen(false);
+        setTaskDescriptions([...taskDescriptions, response.data]);
+      })
+      .catch((err) => console.log(err));
+  };
 
   const handleInputChange = (event) => {
     setSearchTerm(event.target.value);
@@ -54,34 +42,37 @@ const TaskDashboard = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const filtered = tasks.filter((task) =>
-      task.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredTasks(filtered);
+    const taskData = { title: event.target.title.value, description: event.target.description.value };
+    handleAddTask(taskData); // Call the handleAddTask function with the taskData
   };
 
   useEffect(() => {
     axios.get('http://localhost:8000/api/tasks')
       .then((response) => {
-        // Remove duplicate tasks based on task ID
-        const uniqueTasks = response.data.filter((task, index, self) =>
-          index === self.findIndex((t) => t._id === task._id)
-        );
-        setTasks(uniqueTasks);
-        setFilteredTasks(uniqueTasks);
+        setTasks(response.data);
+        setFilteredTasks(response.data);
       })
       .catch((err) => console.log(err));
 
     axios.get('http://localhost:8000/api/getAllUsers')
       .then((response) => {
         setUsers(response.data.data);
+        setUser(response.data.data[0]); // Set the user variable
+      })
+      .catch((err) => console.log(err));
+
+    axios.get('http://localhost:8000/api/descriptions')
+      .then((response) => {
+        setTaskDescriptions(response.data);
       })
       .catch((err) => console.log(err));
   }, []);
 
   useEffect(() => {
     if (selectedUser) {
-      const userFilteredTasks = tasks.filter(task => task.user === selectedUser);
+      const userFilteredTasks = tasks.filter(task =>
+        task.user === selectedUser
+      );
       setFilteredTasks(userFilteredTasks);
     } else {
       setFilteredTasks(tasks);
@@ -109,6 +100,28 @@ const TaskDashboard = () => {
     },
   };
 
+  const holidays = [
+    '2025-01-14', // Makar Sankranti
+    '2025-01-26', // Republic Day
+    '2025-02-26', // Maha Shivaratri
+    '2025-03-14', // Holi
+    '2025-03-31', // Ramjan-Eid (Eid-Ul-Fitra)
+    '2025-04-10', // Mahavir Janma Kalyanak
+    '2025-04-14', // Dr. B.R. Ambedkar Jayanti
+    '2025-04-18', // Good Friday
+    '2025-04-29', // Bhagvan Shree Parshuram Jayanti
+    '2025-06-07', // Eid-Ul-Adha (Bakri-Eid)
+    '2025-08-15', // Independence Day
+    '2025-08-16', // Janmashtami
+    '2025-08-27', // Ganesh Chaturthi
+    '2025-10-02', // Gandhi Jayanti
+    '2025-10-21', // Diwali
+    '2025-10-22', // Govardhan Puja
+    '2025-10-27', // Chhat Puja
+    '2025-11-19', // Guru Nanak Jayanti
+    '2025-12-25', // Christmas Day 
+  ];
+
   const isHoliday = (date) => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     const holiday = holidays.find(h => h === formattedDate);
@@ -125,17 +138,13 @@ const TaskDashboard = () => {
         '2025-04-18': 'Good Friday',
         '2025-04-29': 'Bhagvan Shree Parshuram Jayanti',
         '2025-06-07': 'Eid-Ul-Adha (Bakri-Eid)',
-        '2025-07-06': 'Muharram',
-        '2025-08-09': 'Raksha Bandhan',
         '2025-08-15': 'Independence Day',
         '2025-08-16': 'Janmashtami',
         '2025-08-27': 'Ganesh Chaturthi',
-        '2025-09-05': 'Eid e Milad',
         '2025-10-02': 'Gandhi Jayanti',
         '2025-10-21': 'Diwali',
         '2025-10-22': 'Govardhan Puja',
         '2025-10-27': 'Chhat Puja',
-        '2025-10-31': 'Sardar Vallabhbhai Patel Jayanti',
         '2025-11-19': 'Guru Nanak Jayanti',
         '2025-12-25': 'Christmas Day'
       };
@@ -144,7 +153,6 @@ const TaskDashboard = () => {
     }
     return null;
   };
-
 
   const calculateDuration = (startTime, endTime) => {
     if (!startTime || !endTime) return 'N/A';
@@ -180,7 +188,7 @@ const TaskDashboard = () => {
 
     // Set font size and title position
     doc.setFontSize(18);
-    doc.text(reportTitle, 14, 20);
+    doc.text(reportTitle, 14,  20);
 
     const summaryYPosition = 30;
     doc.setFontSize(12);
@@ -202,9 +210,7 @@ const TaskDashboard = () => {
     const tableDataWithTime = getMonthAttendance().map((record) => {
       let duration = 'N/A';
       if (record.status === 'Present' && record.startTime && record.endTime) {
-        const startTime = record.startTime.split(':').slice(0, 2).join(':');
-        const endTime = record.endTime.split(':').slice(0, 2).join(':');
-        duration = calculateDuration(startTime, endTime);
+        duration = calculateDuration(record.startTime, record.endTime);
       }
       return [
         format(record.date, 'dd-MM-yyyy'),
@@ -241,6 +247,10 @@ const TaskDashboard = () => {
   const handleUserChange = (event) => {
     const selectedUserId = event.target.value;
     setSelectedUser(selectedUserId);
+    const user = users.find(user => user._id === selectedUserId);
+    setUser(user); // Set the user object
+    const taskDescription = taskDescriptions.find(task => task.user === selectedUserId)?.description;
+    setSelectedTaskDescription(taskDescription || ''); // Set the task description
   };
 
   const getUserById = (_id) => {
@@ -295,21 +305,7 @@ const TaskDashboard = () => {
 
   return (
     <div style={styles.container}>
-      <nav style={styles.nav}>
-        <div style={styles.logo}>i</div>
-        <div style={styles.navLinks}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <div
-              style={{ ...styles.activeLink, cursor: 'pointer' }}
-              onClick={() => console.log('Navigate to HOME')}>
-              HOME
-            </div>
-            <div style={{ ...styles.link, cursor: "pointer" }} onClick={() => console.log("Navigate to TASK")}>
-              <a href="/TaskDescription" style={{ textDecoration: "none", color: "#666" }}>TASK</a>
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
         <form onSubmit={handleSubmit}>
@@ -327,38 +323,34 @@ const TaskDashboard = () => {
                 <option key={user._id} value={user._id}>{user.name}</option>
               ))}
             </select>
-            <div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => setIsPopupOpen(true)}
-                  style={{
-                    backgroundColor: 'green',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    width: '40px', // Fixed width
-                    height: '40px', // Fixed height
-                    fontSize: '25px', // Font size for "+"
-                    display: 'flex', // Center alignment
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                    transition: 'background-color 0.3s ease',
-                  }}
-                  onMouseEnter={(e) => (e.target.style.backgroundColor = 'darkgreen')}
-                  onMouseLeave={(e) => (e.target.style.backgroundColor = 'green')}
-                >
-                  +
-                </button>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={() => setIsPopupOpen(true)}
+                style={{
+                  backgroundColor: 'green',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  padding: '10px 15px',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                  transition: 'background-color 0.3s ease',
+                }}
+                onMouseEnter={(e) => (e.target.style.backgroundColor = 'darkgreen')}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = 'green')}
+              >
+                {isPopupOpen ? 'Add Task' : '+'}
+              </button>
             </div>
 
-
-            {/* Render the TaskPopup component */}
-            <TaskDescription isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} onSubmit={handleAddTask} />
+            <TaskDescription
+              isOpen={isPopupOpen}
+              onClose={() => setIsPopupOpen(false)}
+              onSubmit={handleAddTask}
+              user={user} // Pass the user object as a prop
+            />
           </div>
-
         </div>
 
         <div style={{ display: 'flex', gap: '20px' }}>
@@ -381,12 +373,12 @@ const TaskDashboard = () => {
                         <ul>
                           {task.timeSlots.map((slot, index) => (
                             <li key={index}>
-                              {slot.startTime} - {slot.endTime} <br />
-                              <strong>Work:</strong> {slot.notes}
+                              {slot.startTime} - {slot.endTime} <br></br><strong>Work:</strong> {slot.notes}
                             </li>
                           ))}
                         </ul>
                       </div>
+                      <p><strong>Status:</strong>{task.status}</p>
                     </div>
                   ))
                 ) : (
@@ -405,17 +397,16 @@ const TaskDashboard = () => {
 
             <div style={{ border: '1px solid #ccc', borderRadius: '5px', padding: '15px', marginTop: '10px', backgroundColor: 'white' }}>
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <h3>{selectedUser ? `Attendance for ${getUserById(selectedUser)}` : 'My Attendance'}</h3>
-                {/* Add Download Button */}
+                <h3>{selectedUser  ? `Attendance for ${getUserById(selectedUser )}` : 'My Attendance'}</h3>
                 <div style={{ textAlign: 'center', marginTop: '20px' }}>
                   <button
                     onClick={downloadPDF}
                     style={{
                       ...styles.button,
-                      backgroundColor: selectedUser ? '#28a745' : '#ccc',
-                      cursor: selectedUser ? 'pointer' : 'not-allowed',
+                      backgroundColor: selectedUser  ? '#28a745' : '#ccc',
+                      cursor: selectedUser  ? 'pointer' : 'not-allowed',
                     }}
-                    disabled={!selectedUser}
+                    disabled={!selectedUser }
                   >
                     Download Attendance Report
                   </button>
@@ -427,7 +418,7 @@ const TaskDashboard = () => {
                 </div>
               </div>
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                {selectedUser ? (
+                {selectedUser  ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                       <tr>
@@ -533,7 +524,7 @@ const styles = {
     color: '#007bff',
     border: '1px solid #007bff',
     borderRadius: '5px',
-    cursor: 'pointer',
+    cursor: 'pointer ',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -541,4 +532,3 @@ const styles = {
 };
 
 export default TaskDashboard;
-
